@@ -2,8 +2,14 @@ package com.group7.shop.controller;
 
 import com.group7.shop.common.Result;
 import com.group7.shop.dto.ProductView;
+import com.group7.shop.dto.ProductHistoryView;
 import com.group7.shop.dto.PublishProductRequest;
+import com.group7.shop.dto.DealRequest;
+import com.group7.shop.dto.TradeResult;
+import com.group7.shop.dto.TradeResultRequest;
+import com.group7.shop.dto.TransactionView;
 import com.group7.shop.service.ProductService;
+import com.group7.shop.service.ProductTransactionService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,9 +20,12 @@ import java.util.Map;
 @RequestMapping("/api/seller")
 public class SellerProductController {
     private final ProductService productService;
+    private final ProductTransactionService transactionService;
 
-    public SellerProductController(ProductService productService) {
+    public SellerProductController(ProductService productService,
+                                   ProductTransactionService transactionService) {
         this.productService = productService;
+        this.transactionService = transactionService;
     }
 
     /** 该路由必须由李宇轩的 X-Token 拦截器保护。 */
@@ -46,8 +55,24 @@ public class SellerProductController {
         return Result.success("商品已下架", productService.offshelf(id));
     }
 
+    @PostMapping("/products/{id}/deal")
+    public Result<TransactionView> deal(@PathVariable Long id,
+                                        @Valid @RequestBody DealRequest request) {
+        return Result.success("已选定买家，商品进入交易冻结",
+                transactionService.selectBuyer(id, request.intentId()));
+    }
+
+    @PostMapping("/products/{id}/result")
+    public Result<TransactionView> result(@PathVariable Long id,
+                                          @Valid @RequestBody TradeResultRequest request) {
+        String message = request.result() == TradeResult.SUCCESS
+                ? "交易成功，商品已下架"
+                : "交易失败，商品已恢复在售";
+        return Result.success(message, transactionService.markResult(id, request.result()));
+    }
+
     @GetMapping("/history")
-    public Result<Map<String, List<ProductView>>> history() {
+    public Result<Map<String, List<ProductHistoryView>>> history() {
         return Result.success(Map.of("items", productService.history()));
     }
 }

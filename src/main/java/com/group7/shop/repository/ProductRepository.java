@@ -19,6 +19,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByStatusOrderByClosedAtDesc(ProductStatus status);
 
+    @Query("select p from Product p where p.status = com.group7.shop.entity.ProductStatus.OFF_SHELF or p.lastTradeFailedAt is not null")
+    List<Product> findHistoryProducts();
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Product p where p.id = :id")
     Optional<Product> findByIdForUpdate(@Param("id") Long id);

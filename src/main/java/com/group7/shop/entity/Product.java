@@ -50,6 +50,13 @@ public class Product {
 
     private Instant closedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ProductCloseReason closeReason;
+
+    /** 最近一次交易失败时间；商品恢复在售后仍用于历史记录查询。 */
+    private Instant lastTradeFailedAt;
+
     protected Product() {
     }
 
@@ -90,12 +97,21 @@ public class Product {
     public void restoreAfterTradeFailure() {
         this.status = ProductStatus.ON_SALE;
         this.frozenBy = null;
+        this.lastTradeFailedAt = Instant.now();
     }
 
-    public void close() {
+    public void closeManually() {
         this.status = ProductStatus.OFF_SHELF;
         this.frozenBy = null;
         this.closedAt = Instant.now();
+        this.closeReason = ProductCloseReason.MANUAL;
+    }
+
+    public void closeAfterTradeSuccess() {
+        this.status = ProductStatus.OFF_SHELF;
+        this.frozenBy = null;
+        this.closedAt = Instant.now();
+        this.closeReason = ProductCloseReason.SOLD;
     }
 
     public Long getId() { return id; }
@@ -108,6 +124,8 @@ public class Product {
     public Long getVersion() { return version; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getClosedAt() { return closedAt; }
+    public ProductCloseReason getCloseReason() { return closeReason; }
+    public Instant getLastTradeFailedAt() { return lastTradeFailedAt; }
 
     public void setName(String name) { this.name = name; }
     public void setDescription(String description) { this.description = description; }

@@ -2,6 +2,7 @@ package com.group7.shop.service;
 
 import com.group7.shop.common.BusinessException;
 import com.group7.shop.dto.ProductView;
+import com.group7.shop.dto.ProductHistoryView;
 import com.group7.shop.dto.PublishProductRequest;
 import com.group7.shop.entity.FrozenBy;
 import com.group7.shop.entity.Product;
@@ -11,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -98,18 +101,21 @@ public class ProductService {
         if (product.getStatus() == ProductStatus.OFF_SHELF) {
             throw BusinessException.conflict("商品已下架");
         }
-        product.close();
+        product.closeManually();
         Product saved = productRepository.save(product);
         lifecycleListener.onProductOffShelf(saved.getId());
         return ProductView.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<ProductView> history() {
-        // Product 表能准确提供已下架商品。曾交易失败但仍在售的商品，
-        // 需与 Intent/交易模块联查后才能完整返回，见 README 集成说明。
-        return productRepository.findByStatusOrderByClosedAtDesc(ProductStatus.OFF_SHELF)
-                .stream().map(ProductView::from).toList();
+    public List<ProductHistoryView> history() {
+        return productRepository.findHistoryProducts().stream()
+                .map(ProductHistoryView::from)
+                .sorted(Comparator.comparing(
+                        ProductHistoryView::historyAt,
+                        Comparator.nullsLast(Comparator.<Instant>naturalOrder())
+                ).reversed())
+                .toList();
     }
 
     private Product getForUpdate(Long id) {
