@@ -16,6 +16,7 @@ import com.group7.shop.repository.ProductRepository;
 import com.group7.shop.service.ProductService;
 import com.group7.shop.service.ProductImageStorage;
 import com.group7.shop.service.ProductTransactionService;
+import com.group7.shop.service.SellerService;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +64,9 @@ class ProductWorkflowIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private SellerService sellerService;
 
     @BeforeEach
     void cleanDatabase() {
@@ -248,8 +252,10 @@ class ProductWorkflowIntegrationTest {
     void sellerTransactionEndpointsUseUnifiedResponseContract() throws Exception {
         ProductView product = publish("商品", "", "10.00");
         Intent intent = waitingIntent(product.id(), "买家甲", "13800000000", "hash-api");
+        String token = loginAsDefaultSeller();
 
         mockMvc.perform(post("/api/seller/products/{id}/deal", product.id())
+                        .header("X-Token", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"intentId\":" + intent.getId() + "}"))
                 .andExpect(status().isOk())
@@ -258,6 +264,7 @@ class ProductWorkflowIntegrationTest {
                 .andExpect(jsonPath("$.data.intentStatus").value("IN_TRADE"));
 
         mockMvc.perform(post("/api/seller/products/{id}/result", product.id())
+                        .header("X-Token", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"result\":\"FAIL\"}"))
                 .andExpect(status().isOk())
@@ -270,14 +277,20 @@ class ProductWorkflowIntegrationTest {
     void historyEndpointKeepsProductFieldsAtItemLevel() throws Exception {
         ProductView product = publish("历史商品", "接口契约", "88.00");
         productService.offshelf(product.id());
+        String token = loginAsDefaultSeller();
 
-        mockMvc.perform(get("/api/seller/history"))
+        mockMvc.perform(get("/api/seller/history")
+                        .header("X-Token", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.items[0].id").value(product.id()))
                 .andExpect(jsonPath("$.data.items[0].name").value("历史商品"))
                 .andExpect(jsonPath("$.data.items[0].historyType").value("MANUAL"))
                 .andExpect(jsonPath("$.data.items[0].product").doesNotExist());
+    }
+
+    private String loginAsDefaultSeller() {
+        return sellerService.login("seller", "12345678").token();
     }
 
     private ProductView publish(String name, String description, String price) {
