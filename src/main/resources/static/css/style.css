@@ -234,6 +234,9 @@ tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: #fafbfd; }
 .td-mono { font-family: var(--mono); }
 .queue-note { font-size: 12px; color: var(--text-muted); margin-top: 12px; }
+.product-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.btn-xs { padding: 4px 10px; font-size: 12px; border-radius: 7px; }
+.queue-selected { font-size: 12px; color: #b45309; }
 .position-num { font-weight: 800; color: var(--primary-dark); }
 
 /* ---------------- 登录卡片 ---------------- */

@@ -61,7 +61,7 @@
       <!-- 左列：商品 -->
       <div>
         <section class="card">
-          <h3 class="card-title">当前在售商品</h3>
+          <h3 class="card-title">当前商品</h3>
           <div id="admin-product-loading">
             <div class="skeleton sk-product"></div>
           </div>
@@ -83,6 +83,13 @@
                 <p class="mini-product-desc" id="admin-product-desc"></p>
                 <div class="mini-product-price"><span class="price-symbol">&yen;</span><span id="admin-product-price"></span></div>
               </div>
+            </div>
+            <div id="admin-product-actions" class="product-actions" hidden>
+              <button type="button" class="btn btn-ghost btn-sm" id="act-freeze">手动冻结</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="act-unfreeze">解冻</button>
+              <button type="button" class="btn btn-ghost-danger btn-sm" id="act-offshelf">下架</button>
+              <button type="button" class="btn btn-primary btn-sm" id="act-result-success">标记交易成功</button>
+              <button type="button" class="btn btn-ghost-danger btn-sm" id="act-result-fail">标记交易失败</button>
             </div>
           </div>
         </section>
@@ -162,6 +169,7 @@
                     <th>联系电话</th>
                     <th>状态</th>
                     <th>提交时间</th>
+                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody id="queue-tbody"></tbody>
