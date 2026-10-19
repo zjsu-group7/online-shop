@@ -1,0 +1,14 @@
+data/
+uploads/
+.git/
+.gitignore
+*.log
+.idea/
+.vscode/
+docs/
+# 只保留可执行 jar，其余构建中间产物不进构建上下文
+target/*
+!target/online-shop.jar
+Dockerfile
+docker-compose.yml
+.dockerignore

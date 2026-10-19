@@ -1,0 +1,15 @@
+services:
+  online-shop:
+    image: zjsu-group7/online-shop:latest
+    build: .
+    container_name: online-shop
+    ports:
+      - "8080:8080"
+    volumes:
+      - shop-data:/app/data
+      - shop-uploads:/app/uploads
+    restart: unless-stopped
+
+volumes:
+  shop-data:
+  shop-uploads:
