@@ -48,9 +48,6 @@ public class Product {
     @Column(length = 20)
     private FrozenBy frozenBy;
 
-    /** 库存数量；0 时在售商品自动下架（规则域负责人：华天遥）。 */
-    @Column(nullable = false)
-    private int stock;
 
     @Version
     private Long version;
@@ -168,7 +165,6 @@ public class Product {
     public String getImage() { return image; }
     public ProductStatus getStatus() { return status; }
     public FrozenBy getFrozenBy() { return frozenBy; }
-    public int getStock() { return stock; }
     public Long getVersion() { return version; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getClosedAt() { return closedAt; }

@@ -7,11 +7,13 @@ import com.group7.shop.dto.PublishProductRequest;
 import com.group7.shop.dto.SubmitIntentRequest;
 import com.group7.shop.dto.TradeResult;
 import com.group7.shop.dto.TransactionView;
+import com.group7.shop.entity.Category;
 import com.group7.shop.entity.FailedAction;
 import com.group7.shop.entity.Intent;
 import com.group7.shop.entity.IntentStatus;
 import com.group7.shop.entity.Product;
 import com.group7.shop.entity.ProductStatus;
+import com.group7.shop.repository.CategoryRepository;
 import com.group7.shop.repository.IntentRepository;
 import com.group7.shop.repository.ProductRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -55,12 +57,24 @@ class StockStatusRuleTest {
     @Autowired private ProductRepository productRepository;
     @Autowired private IntentRepository intentRepository;
     @Autowired private SellerService sellerService;
+    @Autowired private CategoryRepository categoryRepository;
+
+    private Long categoryId;
 
     /* ---------- 辅助方法 ---------- */
 
     private Long publishWithStock(int stock) {
         return productService.publish(new PublishProductRequest(
-                "测试商品", "状态机测试", new BigDecimal("99.00"), null, stock)).id();
+                "测试商品", "状态机测试", new BigDecimal("99.00"), categoryId(), stock, null, null)).id();
+    }
+
+    /** 迭代 2 起商品必须挂二级类别，测试中按需创建一个。 */
+    private Long categoryId() {
+        if (categoryId == null) {
+            Category root = categoryRepository.save(new Category("测试一级", null, 0));
+            categoryId = categoryRepository.save(new Category("测试二级", root.getId(), 0)).getId();
+        }
+        return categoryId;
     }
 
     private Long submitIntent(Long productId, String name) {
