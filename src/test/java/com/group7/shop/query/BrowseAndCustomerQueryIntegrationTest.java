@@ -91,8 +91,9 @@ class BrowseAndCustomerQueryIntegrationTest {
                 .andExpect(jsonPath("$.data.total").value(13))
                 .andExpect(jsonPath("$.data.items.length()").value(12))
                 .andExpect(jsonPath("$.data.items[0].name").value("商品12"))
+                .andExpect(jsonPath("$.data.items[0].imageUrl").value("/images/商品12.png"))
+                .andExpect(jsonPath("$.data.items[0].images[0]").value("/images/商品12.png"))
                 .andExpect(jsonPath("$.data.items[0].description").doesNotExist())
-                .andExpect(jsonPath("$.data.items[0].images").doesNotExist())
                 .andExpect(jsonPath("$.data.items[0].lastTradeFailedAt").doesNotExist())
                 .andExpect(jsonPath("$.data.items[0].closeReason").doesNotExist())
                 .andExpect(jsonPath("$.data.items[11].name").value("商品1"));
