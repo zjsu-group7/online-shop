@@ -426,6 +426,7 @@ details.demo b { color: var(--text); }
 .customer-orders { margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 14px; }
 .co-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-size: 14px; }
 
+[hidden] { display: none !important; }
 /* ---------------- 弹窗 ---------------- */
 .modal {
   position: fixed; inset: 0; background: rgba(17, 24, 39, .45);
