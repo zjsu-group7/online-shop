@@ -8,6 +8,8 @@ import com.group7.shop.dto.DealRequest;
 import com.group7.shop.dto.TradeResult;
 import com.group7.shop.dto.TradeResultRequest;
 import com.group7.shop.dto.TransactionView;
+import com.group7.shop.dto.UpdateStockRequest;
+import com.group7.shop.entity.FailedAction;
 import com.group7.shop.service.ProductService;
 import com.group7.shop.service.ProductTransactionService;
 import jakarta.validation.Valid;
@@ -62,13 +64,33 @@ public class SellerProductController {
                 transactionService.selectBuyer(id, request.intentId()));
     }
 
+    /** 修改库存（唯一入口）；改为 0 时在售商品自动下架。 */
+    @PutMapping("/products/{id}/stock")
+    public Result<ProductView> updateStock(@PathVariable Long id,
+                                           @Valid @RequestBody UpdateStockRequest request) {
+        return Result.success("库存已更新", productService.updateStock(id, request.stock()));
+    }
+
+    /** 改完库存后重新上架；库存为 0 时拒绝。 */
+    @PostMapping("/products/{id}/reshelf")
+    public Result<ProductView> reshelf(@PathVariable Long id) {
+        return Result.success("商品已重新上架", productService.reshelf(id));
+    }
+
+    /** 标记交易成功 / 失败；成功扣 1 库存并直接下架，失败按 failedAction 处置。 */
     @PostMapping("/products/{id}/result")
     public Result<TransactionView> result(@PathVariable Long id,
                                           @Valid @RequestBody TradeResultRequest request) {
-        String message = request.result() == TradeResult.SUCCESS
-                ? "交易成功，商品已下架"
-                : "交易失败，商品已恢复在售";
-        return Result.success(message, transactionService.markResult(id, request.result()));
+        String message;
+        if (request.result() == TradeResult.SUCCESS) {
+            message = "交易成功，商品已下架";
+        } else if (request.failedAction() == FailedAction.REQUEUE) {
+            message = "交易失败，商品已恢复在售，该记录已重新排队";
+        } else {
+            message = "交易失败，商品已恢复在售";
+        }
+        return Result.success(message,
+                transactionService.markResult(id, request.result(), request.failedAction()));
     }
 
     @GetMapping("/history")

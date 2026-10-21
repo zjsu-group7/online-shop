@@ -85,14 +85,13 @@ class ProductWorkflowIntegrationTest {
     }
 
     @Test
-    void tc15RejectDuplicatePublish() {
-        publish("商品一", "", "10.00");
+    void tc15AllowMultipleProductsOnSale() {
+        ProductView first = publish("商品一", "", "10.00");
+        ProductView second = publish("商品二", "", "20.00");
 
-        assertThatThrownBy(() -> publish("商品二", "", "20.00"))
-                .isInstanceOfSatisfying(BusinessException.class, ex -> {
-                    assertThat(ex.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getMessage()).isEqualTo("已有商品在售或交易中");
-                });
+        assertThat(first.status()).isEqualTo(ProductStatus.ON_SALE);
+        assertThat(second.status()).isEqualTo(ProductStatus.ON_SALE);
+        assertThat(productRepository.findAll()).hasSize(2);
     }
 
     @Test
@@ -266,7 +265,7 @@ class ProductWorkflowIntegrationTest {
         mockMvc.perform(post("/api/seller/products/{id}/result", product.id())
                         .header("X-Token", token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"result\":\"FAIL\"}"))
+                        .content("{\"result\":\"FAIL\",\"failedAction\":\"VOID\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.product.status").value("ON_SALE"))
@@ -293,9 +292,12 @@ class ProductWorkflowIntegrationTest {
         return sellerService.login("seller", "12345678").token();
     }
 
+    /** 发布并置初始库存 1，使交易类用例满足「成交需有库存」的前置条件。 */
     private ProductView publish(String name, String description, String price) {
-        return productService.publish(new PublishProductRequest(
+        ProductView product = productService.publish(new PublishProductRequest(
                 name, description, new BigDecimal(price), null));
+        productService.updateStock(product.id(), 1);
+        return product;
     }
 
     private Intent waitingIntent(Long productId, String name, String phone, String hash) {
