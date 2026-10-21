@@ -6,11 +6,13 @@ import com.group7.shop.dto.ProductView;
 import com.group7.shop.dto.PublishProductRequest;
 import com.group7.shop.dto.TradeResult;
 import com.group7.shop.dto.TransactionView;
+import com.group7.shop.entity.Category;
 import com.group7.shop.entity.FrozenBy;
 import com.group7.shop.entity.Intent;
 import com.group7.shop.entity.IntentStatus;
 import com.group7.shop.entity.Product;
 import com.group7.shop.entity.ProductStatus;
+import com.group7.shop.repository.CategoryRepository;
 import com.group7.shop.repository.IntentRepository;
 import com.group7.shop.repository.ProductRepository;
 import com.group7.shop.service.ProductService;
@@ -68,10 +70,18 @@ class ProductWorkflowIntegrationTest {
     @Autowired
     private SellerService sellerService;
 
+    @Autowired
+    private CategoryRepository categoryRepository;
+
+    private Long categoryId;
+
     @BeforeEach
     void cleanDatabase() {
         intentRepository.deleteAll();
         productRepository.deleteAll();
+        categoryRepository.deleteAll();
+        Category root = categoryRepository.save(new Category("测试一级", null, 0));
+        categoryId = categoryRepository.save(new Category("测试二级", root.getId(), 0)).getId();
     }
 
     @Test
@@ -85,22 +95,21 @@ class ProductWorkflowIntegrationTest {
     }
 
     @Test
-    void tc15RejectDuplicatePublish() {
-        publish("商品一", "", "10.00");
+    void tc15AllowMultipleProducts() {
+        ProductView first = publish("商品一", "", "10.00");
+        ProductView second = publish("商品二", "", "20.00");
 
-        assertThatThrownBy(() -> publish("商品二", "", "20.00"))
-                .isInstanceOfSatisfying(BusinessException.class, ex -> {
-                    assertThat(ex.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getMessage()).isEqualTo("已有商品在售或交易中");
-                });
+        assertThat(first.id()).isNotEqualTo(second.id());
+        assertThat(productRepository.findAll()).hasSize(2);
+        assertThat(productService.sellerProducts()).hasSize(2);
     }
 
     @Test
     void tc16RejectNonPositivePriceAndMoreThanTwoDecimals() {
         PublishProductRequest tooPrecise = new PublishProductRequest(
-                "商品", "", new BigDecimal("1.001"), null);
+                "商品", "", new BigDecimal("1.001"), categoryId, 1, null, null);
         PublishProductRequest zero = new PublishProductRequest(
-                "商品", "", BigDecimal.ZERO, null);
+                "商品", "", BigDecimal.ZERO, categoryId, 1, null, null);
 
         Set<ConstraintViolation<PublishProductRequest>> precisionViolations =
                 validator.validate(tooPrecise);
@@ -295,7 +304,7 @@ class ProductWorkflowIntegrationTest {
 
     private ProductView publish(String name, String description, String price) {
         return productService.publish(new PublishProductRequest(
-                name, description, new BigDecimal(price), null));
+                name, description, new BigDecimal(price), categoryId, 1, null, null));
     }
 
     private Intent waitingIntent(Long productId, String name, String phone, String hash) {

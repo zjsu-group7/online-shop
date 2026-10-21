@@ -34,6 +34,12 @@ public class Product {
     @Column(length = 500)
     private String image;
 
+    /** 所属二级类别。 */
+    private Long categoryId;
+
+    /** 库存数量；成交后减 1，为 0 时在售商品自动下架。 */
+    private Integer stock;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProductStatus status = ProductStatus.ON_SALE;
@@ -60,13 +66,20 @@ public class Product {
     protected Product() {
     }
 
-    public Product(String name, String description, BigDecimal price, String image) {
+    public Product(String name, String description, BigDecimal price, String image,
+                   Long categoryId, Integer stock) {
         this.name = name;
         this.description = description;
         this.price = price;
         this.image = image;
+        this.categoryId = categoryId;
+        this.stock = stock;
         this.status = ProductStatus.ON_SALE;
         this.frozenBy = null;
+    }
+
+    public Product(String name, String description, BigDecimal price, String image) {
+        this(name, description, price, image, null, null);
     }
 
     @jakarta.persistence.PrePersist
@@ -134,4 +147,8 @@ public class Product {
     public void setStatus(ProductStatus status) { this.status = status; }
     public void setFrozenBy(FrozenBy frozenBy) { this.frozenBy = frozenBy; }
     public void setClosedAt(Instant closedAt) { this.closedAt = closedAt; }
+    public Long getCategoryId() { return categoryId; }
+    public Integer getStock() { return stock; }
+    public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
+    public void setStock(Integer stock) { this.stock = stock; }
 }

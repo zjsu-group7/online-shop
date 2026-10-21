@@ -15,6 +15,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     boolean existsByStatusIn(List<ProductStatus> statuses);
 
+    boolean existsByCategoryId(Long categoryId);
+
     List<Product> findByStatusInOrderByCreatedAtDesc(List<ProductStatus> statuses);
 
     List<Product> findByStatusOrderByClosedAtDesc(ProductStatus status);
