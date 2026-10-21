@@ -178,6 +178,20 @@ public class IntentService {
     }
 
     /**
+     * 交易失败并选择「重新排队」：该意向回到 WAITING 并刷新排队时间排到队尾。
+     * 供标记交易结果流程调用（规则域负责人：华天遥）；非交易中意向 → 409。
+     */
+    @Transactional
+    public IntentStatus requeueToTail(Long intentId) {
+        Intent intent = loadById(intentId);
+        if (intent.getStatus() != IntentStatus.IN_TRADE) {
+            throw BusinessException.conflict("意向不在交易中，无法重新排队");
+        }
+        intent.requeueToTail(Instant.now());
+        return intentRepository.save(intent).getStatus();
+    }
+
+    /**
      * 将该商品剩余 WAITING 意向全部置为 FAILED（终态留痕）。
      * 供「交易成功后其余意向置失败」「手动下架后剩余意向置失败」两个场景调用。
      */

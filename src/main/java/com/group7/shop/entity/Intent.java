@@ -48,7 +48,8 @@ public class Intent {
     @Column(nullable = false, length = 20)
     private IntentStatus status = IntentStatus.WAITING;
 
-    @Column(name = "submitted_at", nullable = false, updatable = false)
+    /** 排队时间：提交时写入；交易失败选择 REQUEUE 时刷新为当前时间，从而排到队尾。 */
+    @Column(name = "submitted_at", nullable = false)
     private Instant submittedAt;
 
     protected Intent() {
@@ -94,6 +95,12 @@ public class Intent {
     /** 交易失败（终态）。 */
     public void markFailed() {
         this.status = IntentStatus.FAILED;
+    }
+
+    /** 交易失败后重新排队：回到 WAITING 并刷新排队时间，从而排到队尾。 */
+    public void requeueToTail(Instant at) {
+        this.status = IntentStatus.WAITING;
+        this.submittedAt = at;
     }
 
     public Long getId() { return id; }

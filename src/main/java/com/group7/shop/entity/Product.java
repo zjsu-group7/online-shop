@@ -48,6 +48,10 @@ public class Product {
     @Column(length = 20)
     private FrozenBy frozenBy;
 
+    /** 库存数量；0 时在售商品自动下架（规则域负责人：华天遥）。 */
+    @Column(nullable = false)
+    private int stock;
+
     @Version
     private Long version;
 
@@ -76,6 +80,10 @@ public class Product {
         this.stock = stock;
         this.status = ProductStatus.ON_SALE;
         this.frozenBy = null;
+    }
+
+    public Product(String name, String description, BigDecimal price, String image, int stock) {
+        this(name, description, price, image, null, stock);
     }
 
     public Product(String name, String description, BigDecimal price, String image) {
@@ -127,6 +135,32 @@ public class Product {
         this.closeReason = ProductCloseReason.SOLD;
     }
 
+    /** 库存改为 0 时在售商品自动下架。 */
+    public void closeOutOfStock() {
+        this.status = ProductStatus.OFF_SHELF;
+        this.frozenBy = null;
+        this.closedAt = Instant.now();
+        this.closeReason = ProductCloseReason.OUT_OF_STOCK;
+    }
+
+    /** 修改库存（唯一入口由 ProductService.updateStock 保证）。 */
+    public void changeStock(int stock) {
+        this.stock = stock;
+    }
+
+    /** 交易成功扣减 1 件库存；调用前由服务层校验库存 > 0。 */
+    public void deductOneStock() {
+        this.stock = this.stock - 1;
+    }
+
+    /** 重新上架：由已下架回到在售，清空关闭信息；库存由服务层校验 > 0。 */
+    public void reopen() {
+        this.status = ProductStatus.ON_SALE;
+        this.frozenBy = null;
+        this.closedAt = null;
+        this.closeReason = null;
+    }
+
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getDescription() { return description; }
@@ -134,6 +168,7 @@ public class Product {
     public String getImage() { return image; }
     public ProductStatus getStatus() { return status; }
     public FrozenBy getFrozenBy() { return frozenBy; }
+    public int getStock() { return stock; }
     public Long getVersion() { return version; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getClosedAt() { return closedAt; }

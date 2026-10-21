@@ -135,8 +135,51 @@ public class ProductService {
         if (product.getFrozenBy() != FrozenBy.MANUAL) {
             throw BusinessException.conflict("商品冻结来源不正确，无法手动解冻");
         }
+        if (product.getStock() <= 0) {
+            throw BusinessException.badRequest("库存为 0，请先补货再解冻");
+        }
         product.unfreezeManually();
         return ProductView.from(productRepository.save(product), imageUrls(product.getId()));
+    }
+
+    /**
+     * 修改库存（唯一入口，规则域负责人：华天遥）。
+     * 交易冻结（AUTO）期间拒绝；在售商品库存改为 0 时自动下架，并联动作废剩余排队意向。
+     */
+    @Transactional
+    public ProductView updateStock(Long id, int stock) {
+        if (stock < 0) {
+            throw BusinessException.badRequest("库存不能为负数");
+        }
+        Product product = getForUpdate(id);
+        if (product.getStatus() == ProductStatus.FROZEN && product.getFrozenBy() == FrozenBy.AUTO) {
+            throw BusinessException.badRequest("交易中不可修改库存，请先标记交易结果");
+        }
+        product.changeStock(stock);
+        if (product.getStatus() == ProductStatus.ON_SALE && stock == 0) {
+            product.closeOutOfStock();
+            Product saved = productRepository.save(product);
+            lifecycleListener.onProductOffShelf(saved.getId());
+            return ProductView.from(saved);
+        }
+        return ProductView.from(productRepository.save(product));
+    }
+
+    /**
+     * 重新上架：仅已下架商品可用，库存为 0 时拒绝（规则域负责人：华天遥）。
+     * 重新上架不改变库存，也不恢复历史意向。
+     */
+    @Transactional
+    public ProductView reshelf(Long id) {
+        Product product = getForUpdate(id);
+        if (product.getStatus() != ProductStatus.OFF_SHELF) {
+            throw BusinessException.conflict("仅已下架商品可以重新上架");
+        }
+        if (product.getStock() <= 0) {
+            throw BusinessException.badRequest("库存为 0，请先补货再上架");
+        }
+        product.reopen();
+        return ProductView.from(productRepository.save(product));
     }
 
     @Transactional

@@ -26,6 +26,7 @@ public record PublishProductRequest(
         @NotNull(message = "商品类别必填")
         Long categoryId,
 
+        /** 初始库存，缺省为 0；库存为 0 时需补货后才能上架售卖。 */
         @Min(value = 0, message = "库存不能为负数")
         Integer stock,
 
@@ -35,4 +36,8 @@ public record PublishProductRequest(
         /** 兼容旧版单图字段；images 为空时生效。 */
         String image
 ) {
+    /** 兼容迭代 1 的四参调用。 */
+    public PublishProductRequest(String name, String description, BigDecimal price, String image) {
+        this(name, description, price, null, 0, null, image);
+    }
 }
