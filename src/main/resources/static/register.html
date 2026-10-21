@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>注册 · 单品小铺</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">铺</span>
+      <span class="brand-text"><strong>单品小铺</strong><small>校园二手 · 好物直达</small></span>
+    </a>
+    <a class="seller-entry" href="admin.html">卖家后台</a>
+  </div>
+</header>
+
+<main class="container main">
+  <section class="card auth-card">
+    <h2 class="card-title">买家注册</h2>
+    <p class="card-sub">注册后即可下单购买商品</p>
+
+    <div class="banner banner-error" id="register-error" hidden></div>
+
+    <form id="register-form" novalidate>
+      <div class="form-field">
+        <label for="reg-username">用户名 <span style="color:var(--danger)">*</span></label>
+        <input class="input" id="reg-username" maxlength="50" placeholder="字母 / 数字，注册后不可修改" autocomplete="username">
+        <p class="field-error" id="reg-username-error" hidden></p>
+      </div>
+      <div class="form-field">
+        <label for="reg-password">密码 <span style="color:var(--danger)">*</span></label>
+        <input class="input" id="reg-password" type="password" maxlength="64" placeholder="不少于 8 位" autocomplete="new-password">
+        <p class="field-error" id="reg-password-error" hidden></p>
+      </div>
+      <div class="form-field">
+        <label for="reg-password2">确认密码 <span style="color:var(--danger)">*</span></label>
+        <input class="input" id="reg-password2" type="password" maxlength="64" placeholder="请再次输入密码" autocomplete="new-password">
+        <p class="field-error" id="reg-password2-error" hidden></p>
+      </div>
+      <div class="form-field">
+        <label for="reg-phone">联系电话 <span style="color:var(--danger)">*</span></label>
+        <input class="input" id="reg-phone" maxlength="20" placeholder="请输入手机号" inputmode="tel" autocomplete="tel">
+        <p class="field-error" id="reg-phone-error" hidden></p>
+      </div>
+      <div class="form-field">
+        <label for="reg-place">默认交易地点（选填）</label>
+        <input class="input" id="reg-place" maxlength="200" placeholder="例如：图书馆门口">
+        <p class="field-error" id="reg-place-error" hidden></p>
+        <p class="field-counter" id="reg-place-counter">0 / 200</p>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="register-submit">注 册</button>
+    </form>
+
+    <p class="auth-tip">已有账号？<a href="login.html">去登录</a></p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  第 7 组 · 在线购物系统 · 迭代 2（挑战需求 A）· 买家端
+</footer>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>个人中心 · 单品小铺</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">铺</span>
+      <span class="brand-text"><strong>单品小铺</strong><small>校园二手 · 好物直达</small></span>
+    </a>
+    <div class="header-actions">
+      <div id="nav-guest" hidden>
+        <a class="btn btn-ghost btn-sm" href="login.html">登录</a>
+        <a class="btn btn-primary btn-sm" href="register.html">注册</a>
+      </div>
+      <div id="nav-user" hidden>
+        <span class="welcome">你好，<b id="nav-username">买家</b></span>
+        <a class="btn btn-ghost btn-sm" href="profile.html">个人中心</a>
+        <a class="btn btn-ghost btn-sm" href="orders.html">我的订单</a>
+        <button type="button" class="btn btn-ghost-danger btn-sm" id="nav-logout">退出</button>
+      </div>
+      <a class="seller-entry" href="admin.html">卖家后台</a>
+    </div>
+  </div>
+</header>
+
+<main class="container main">
+
+  <div id="profile-loading"><div class="skeleton sk-line"></div><div class="skeleton sk-line short"></div></div>
+
+  <section class="card auth-card" id="profile-card" hidden>
+    <h2 class="card-title">个人中心</h2>
+    <p class="card-sub">修改联系电话与默认交易地点</p>
+
+    <div class="banner banner-error" id="profile-error" hidden></div>
+
+    <form id="profile-form" novalidate>
+      <div class="form-field">
+        <label for="pf-username">用户名</label>
+        <input class="input" id="pf-username" disabled>
+        <p class="field-hint">用户名注册后不可修改</p>
+      </div>
+      <div class="form-field">
+        <label for="pf-phone">联系电话 <span style="color:var(--danger)">*</span></label>
+        <input class="input" id="pf-phone" maxlength="20" inputmode="tel" autocomplete="tel">
+        <p class="field-error" id="pf-phone-error" hidden></p>
+      </div>
+      <div class="form-field">
+        <label for="pf-place">默认交易地点（选填）</label>
+        <input class="input" id="pf-place" maxlength="200" placeholder="例如：图书馆门口，留空表示不设置">
+        <p class="field-error" id="pf-place-error" hidden></p>
+        <p class="field-counter" id="pf-place-counter">0 / 200</p>
+      </div>
+      <div class="form-field">
+        <label>注册时间</label>
+        <input class="input" id="pf-created" disabled>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="profile-submit">保存修改</button>
+    </form>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  第 7 组 · 在线购物系统 · 迭代 2（挑战需求 A）· 买家端
+</footer>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script src="js/profile.js"></script>
+</body>
+</html>

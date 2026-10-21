@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>我的订单 · 单品小铺</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">铺</span>
+      <span class="brand-text"><strong>单品小铺</strong><small>校园二手 · 好物直达</small></span>
+    </a>
+    <div class="header-actions">
+      <div id="nav-guest" hidden>
+        <a class="btn btn-ghost btn-sm" href="login.html">登录</a>
+        <a class="btn btn-primary btn-sm" href="register.html">注册</a>
+      </div>
+      <div id="nav-user" hidden>
+        <span class="welcome">你好，<b id="nav-username">买家</b></span>
+        <a class="btn btn-ghost btn-sm" href="profile.html">个人中心</a>
+        <a class="btn btn-ghost btn-sm" href="orders.html">我的订单</a>
+        <button type="button" class="btn btn-ghost-danger btn-sm" id="nav-logout">退出</button>
+      </div>
+      <a class="seller-entry" href="admin.html">卖家后台</a>
+    </div>
+  </div>
+</header>
+
+<main class="container main">
+
+  <section class="card">
+    <div class="card-title-row">
+      <h3 class="card-title">我的订单</h3>
+      <span class="card-sub" id="orders-count" style="margin:0"></span>
+    </div>
+    <p class="card-sub">仅展示已出结果（交易成功 / 交易失败）的下单记录</p>
+
+    <div id="orders-loading">
+      <div class="skeleton sk-line"></div>
+      <div class="skeleton sk-line short"></div>
+      <div class="skeleton sk-line"></div>
+    </div>
+
+    <div id="orders-empty" class="empty-state" hidden>
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 5h6a2 2 0 0 1 2 2v12l-3-2-3 2-3-2-3 2V7a2 2 0 0 1 2-2z"/><path d="M9 12h6"/>
+      </svg>
+      <p>还没有已出结果的订单</p>
+      <p style="font-size:12.5px;color:var(--text-muted)">下单后需等待店主确认交易结果，成功后会显示在这里</p>
+    </div>
+
+    <div id="orders-body" hidden>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>商品</th>
+              <th>下单时间</th>
+              <th>交易结果</th>
+              <th>交易时间</th>
+            </tr>
+          </thead>
+          <tbody id="orders-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  第 7 组 · 在线购物系统 · 迭代 2（挑战需求 A）· 买家端
+</footer>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script src="js/orders.js"></script>
+</body>
+</html>

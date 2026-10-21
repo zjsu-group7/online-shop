@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登录 · 单品小铺</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">铺</span>
+      <span class="brand-text"><strong>单品小铺</strong><small>校园二手 · 好物直达</small></span>
+    </a>
+    <a class="seller-entry" href="admin.html">卖家后台</a>
+  </div>
+</header>
+
+<main class="container main">
+  <section class="card auth-card">
+    <h2 class="card-title">买家登录</h2>
+    <p class="card-sub">登录后即可下单，并在「我的订单」查看交易结果</p>
+
+    <div class="banner banner-error" id="login-error" hidden></div>
+
+    <form id="login-form" novalidate>
+      <div class="form-field">
+        <label for="login-username">用户名</label>
+        <input class="input" id="login-username" maxlength="50" placeholder="请输入用户名" autocomplete="username">
+        <p class="field-error" id="login-username-error" hidden></p>
+      </div>
+      <div class="form-field">
+        <label for="login-password">密码</label>
+        <input class="input" id="login-password" type="password" maxlength="64" placeholder="请输入密码" autocomplete="current-password">
+        <p class="field-error" id="login-password-error" hidden></p>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="login-submit">登 录</button>
+    </form>
+
+    <p class="auth-tip">还没有账号？<a href="register.html">立即注册</a></p>
+    <p class="auth-tip">连续输错 5 次将锁定 5 分钟</p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  第 7 组 · 在线购物系统 · 迭代 2（挑战需求 A）· 买家端
+</footer>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>

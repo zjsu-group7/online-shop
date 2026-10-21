@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>商品详情 · 单品小铺</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%234f46e5'/%3E%3Cpath d='M20 26h24l-3 22a4 4 0 0 1-4 4H27a4 4 0 0 1-4-4l-3-22z' fill='white'/%3E%3Cpath d='M24 26v-4a8 8 0 0 1 16 0v4' fill='none' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">铺</span>
+      <span class="brand-text">
+        <strong>单品小铺</strong>
+        <small>校园二手 · 好物直达</small>
+      </span>
+    </a>
+    <div class="header-actions">
+      <div id="nav-guest" hidden>
+        <a class="btn btn-ghost btn-sm" href="login.html">登录</a>
+        <a class="btn btn-primary btn-sm" href="register.html">注册</a>
+      </div>
+      <div id="nav-user" hidden>
+        <span class="welcome">你好，<b id="nav-username">买家</b></span>
+        <a class="btn btn-ghost btn-sm" href="profile.html">个人中心</a>
+        <a class="btn btn-ghost btn-sm" href="orders.html">我的订单</a>
+        <button type="button" class="btn btn-ghost-danger btn-sm" id="nav-logout">退出</button>
+      </div>
+      <a class="seller-entry" href="admin.html">卖家后台</a>
+    </div>
+  </div>
+</header>
+
+<main class="container main">
+
+  <div id="detail-loading">
+    <div class="skeleton sk-product"></div>
+  </div>
+
+  <div id="detail-offline" class="banner banner-muted" hidden>
+    未连接到后端服务，无法加载商品详情。
+  </div>
+
+  <div id="detail-empty" class="empty-state" hidden>
+    <p>商品不存在或已下架</p>
+    <p style="margin-top:12px"><a class="btn btn-ghost btn-sm" href="index.html">返回商品列表</a></p>
+  </div>
+
+  <div id="detail-body" hidden>
+    <section class="card">
+      <div class="detail-layout">
+
+        <!-- 左：多图展示（按 sort 有序） -->
+        <div class="detail-media">
+          <div class="gallery-main">
+            <img id="gallery-main-img" alt="商品图片">
+          </div>
+          <div class="gallery-thumbs" id="gallery-thumbs"></div>
+        </div>
+
+        <!-- 右：信息与下单 -->
+        <div class="detail-info">
+          <div class="product-title-row">
+            <h1 class="product-name" id="detail-name"></h1>
+            <span id="detail-status"></span>
+          </div>
+
+          <div class="detail-tags">
+            <span id="detail-category" class="pc-cat"></span>
+            <span id="detail-stock" class="pc-stock"></span>
+            <span id="detail-time" class="pc-time"></span>
+          </div>
+
+          <div class="product-price"><span class="price-symbol">&yen;</span><span id="detail-price"></span></div>
+
+          <div class="order-box" id="order-box">
+            <div id="order-login-tip" class="banner banner-info" hidden>
+              请先<a href="login.html">登录</a>后再下单。
+            </div>
+            <div id="order-disabled-tip" class="banner banner-warning" hidden></div>
+
+            <form id="order-form" novalidate>
+              <div class="form-row">
+                <div class="form-field">
+                  <label for="order-name">姓名</label>
+                  <input class="input" id="order-name" maxlength="50" placeholder="请输入您的姓名" autocomplete="name">
+                  <p class="field-error" id="order-name-error" hidden></p>
+                </div>
+                <div class="form-field">
+                  <label for="order-phone">联系电话</label>
+                  <input class="input" id="order-phone" maxlength="20" placeholder="请输入手机号" inputmode="tel" autocomplete="tel">
+                  <p class="field-error" id="order-phone-error" hidden></p>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block" id="order-submit">提交下单</button>
+              <p class="order-note">下单后不可撤销；交易结果（成功 / 失败）可在「我的订单」中查看。</p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 富文本描述 -->
+    <section class="card">
+      <h3 class="card-title">商品描述</h3>
+      <div class="rich-text" id="detail-desc"></div>
+    </section>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  第 7 组 · 在线购物系统 · 迭代 2（挑战需求 A）· 买家端
+</footer>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script src="js/product.js"></script>
+</body>
+</html>

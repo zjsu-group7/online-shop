@@ -1,7 +1,7 @@
 /* ============================================================
-   买家端逻辑：商品展示 / 提交意向 / 口令码展示 / 凭码查询
-   对应接口：GET /api/product、POST /api/intents、GET /api/intents/{code}
-   单品小铺 · 迭代1 · 邱圣洁
+   买家端 · 商品列表：分页 / 排序 / 关键词搜索 / 分类筛选
+   对应接口：GET /api/products、GET /api/categories
+   单品小铺 · 迭代 2 · 邱圣洁
    ============================================================ */
 (function () {
   'use strict';
@@ -10,240 +10,242 @@
   var Api = window.Api;
   var $ = function (id) { return document.getElementById(id); };
 
-  var els = {
-    /* 商品区 */
-    productLoading: $('product-loading'),
-    productEmpty: $('product-empty'),
-    productBody: $('product-body'),
-    productImage: $('product-image'),
-    productName: $('product-name'),
-    productDesc: $('product-desc'),
-    productPrice: $('product-price'),
-    productStatus: $('product-status'),
-    offlineTip: $('offline-tip'),
-    /* 意向表单 */
-    intentEmptyTip: $('intent-empty-tip'),
-    intentFrozenTip: $('intent-frozen-tip'),
-    intentForm: $('intent-form'),
-    intentName: $('intent-name'),
-    intentPhone: $('intent-phone'),
-    nameError: $('intent-name-error'),
-    phoneError: $('intent-phone-error'),
-    intentSubmit: $('intent-submit'),
-    /* 口令码 */
-    codeCard: $('code-card'),
-    codeText: $('code-text'),
-    copyBtn: $('copy-btn'),
-    toQueryBtn: $('to-query-btn'),
-    /* 凭码查询 */
-    queryForm: $('query-form'),
-    queryCode: $('query-code'),
-    queryCodeError: $('query-code-error'),
-    querySubmit: $('query-submit'),
-    queryResult: $('query-result')
+  var PAGE_SIZE = 12; /* 每页 12 件（Wiki 规定） */
+
+  var state = {
+    page: 1,
+    size: PAGE_SIZE,
+    q: '',
+    categoryId: '',
+    sort: (Api.SORT_OPTIONS && Api.SORT_OPTIONS[0] ? Api.SORT_OPTIONS[0].value : '')
   };
 
-  function show(el, on) { if (el) el.hidden = !on; }
+  var els = {
+    offlineTip: $('offline-tip'),
+    loading: $('list-loading'),
+    empty: $('list-empty'),
+    body: $('list-body'),
+    grid: $('product-grid'),
+    pagination: $('pagination'),
+    q: $('filter-q'),
+    category: $('filter-category'),
+    sort: $('filter-sort'),
+    searchBtn: $('filter-search-btn'),
+    resetBtn: $('filter-reset'),
+    summary: $('filter-summary')
+  };
 
-  function fieldError(el, msg) {
-    if (!msg) { show(el, false); return; }
-    el.textContent = msg;
-    show(el, true);
+  /* ==================== URL 参数同步（便于分享与刷新保持） ==================== */
+
+  function readUrlState() {
+    var params = new URLSearchParams(location.search);
+    state.q = params.get('q') || '';
+    state.categoryId = params.get('categoryId') || '';
+    state.sort = params.get('sort') || state.sort;
+    state.page = Math.max(1, parseInt(params.get('page') || '1', 10) || 1);
   }
 
-  /* ==================== 商品展示 ==================== */
+  function writeUrlState() {
+    var params = new URLSearchParams();
+    if (state.q) params.set('q', state.q);
+    if (state.categoryId) params.set('categoryId', state.categoryId);
+    if (state.sort) params.set('sort', state.sort);
+    if (state.page > 1) params.set('page', String(state.page));
+    var qs = params.toString();
+    history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
+  }
 
-  async function loadProduct() {
-    show(els.productLoading, true);
-    show(els.productEmpty, false);
-    show(els.productBody, false);
-    show(els.offlineTip, false);
+  /* ==================== 筛选栏 ==================== */
 
-    var product = null;
+  function initSortSelect() {
+    var html = '';
+    (Api.SORT_OPTIONS || []).forEach(function (opt) {
+      html += '<option value="' + App.escapeHtml(opt.value) + '">' + App.escapeHtml(opt.label) + '</option>';
+    });
+    els.sort.innerHTML = html;
+    els.sort.value = state.sort;
+  }
+
+  async function loadCategories() {
     try {
-      var data = await Api.getCurrentProduct();
-      product = (data && data.product) || null;
+      var tree = await Api.getCategories();
+      renderCategoryOptions(tree || []);
     } catch (e) {
+      /* 类别加载失败不阻塞列表 */
+      App.showToast('分类加载失败：' + e.message, 'error');
+    }
+  }
+
+  /* 两级类别：一级用 optgroup，选项为二级类别 */
+  function renderCategoryOptions(tree) {
+    var html = '<option value="">全部分类</option>';
+    (tree || []).forEach(function (parent) {
+      var children = parent.children || [];
+      if (!children.length) {
+        html += '<option value="' + App.escapeHtml(parent.id) + '">' + App.escapeHtml(parent.name) + '</option>';
+        return;
+      }
+      html += '<optgroup label="' + App.escapeHtml(parent.name) + '">';
+      children.forEach(function (child) {
+        html += '<option value="' + App.escapeHtml(child.id) + '">' + App.escapeHtml(child.name) + '</option>';
+      });
+      html += '</optgroup>';
+    });
+    els.category.innerHTML = html;
+    if (state.categoryId) els.category.value = state.categoryId;
+  }
+
+  function updateSummary(total) {
+    var parts = [];
+    if (state.q) parts.push('关键词「' + state.q + '」');
+    if (state.categoryId && els.category.selectedIndex > 0) {
+      parts.push('分类「' + els.category.options[els.category.selectedIndex].text + '」');
+    }
+    if (total !== undefined && total !== null) parts.push('共 ' + total + ' 件');
+    if (!parts.length) { els.summary.hidden = true; return; }
+    els.summary.textContent = parts.join(' · ');
+    els.summary.hidden = false;
+  }
+
+  /* ==================== 列表加载 ==================== */
+
+  async function loadList() {
+    App.show(els.loading, true);
+    App.show(els.empty, false);
+    App.show(els.body, false);
+    App.show(els.offlineTip, false);
+
+    try {
+      var data = await Api.listProducts({
+        page: state.page,
+        size: state.size,
+        sort: state.sort,
+        q: state.q,
+        categoryId: state.categoryId
+      });
+      renderList(data);
+    } catch (e) {
+      App.show(els.loading, false);
       if (e.status === 0) {
-        show(els.offlineTip, true); /* 骨架模式：后端未启动 */
+        App.show(els.offlineTip, true);
+        App.show(els.empty, true);
       } else {
         App.showToast(e.message, 'error');
+        App.show(els.empty, true);
       }
-      product = null;
     }
-    renderProduct(product);
   }
 
-  function renderProduct(p) {
-    show(els.productLoading, false);
-    if (!p) {
-      show(els.productEmpty, true);
-      setIntentState('empty');
+  function renderList(data) {
+    App.show(els.loading, false);
+
+    var items = (data && data.items) || [];
+    var total = (data && data.total) || 0;
+    var page = (data && data.page) || state.page;
+    var size = (data && data.size) || state.size;
+
+    updateSummary(total);
+
+    if (!items.length) {
+      App.show(els.empty, true);
+      App.show(els.body, false);
       return;
     }
 
-    els.productName.textContent = p.name || '未命名商品';
-    els.productDesc.textContent = p.description || '店主还没有写描述～';
-    els.productPrice.textContent = App.formatPrice(p.price);
-    els.productStatus.innerHTML = App.badgeHtml(App.PRODUCT_BADGE, p.status);
+    var html = '';
+    items.forEach(function (p) {
+      var cover = '';
+      if (p.images && p.images.length) cover = App.resolveImageUrl(p.images[0]);
+      else if (p.coverImage) cover = App.resolveImageUrl(p.coverImage);
+      else if (p.image) cover = App.resolveImageUrl(p.image);
+      if (!cover) cover = App.PLACEHOLDER_IMAGE;
 
-    var img = App.resolveImageUrl(p.imageUrl || p.image);
-    els.productImage.src = img || App.PLACEHOLDER_IMAGE;
-    App.bindImageFallback(els.productImage);
-
-    show(els.productBody, true);
-    setIntentState(p.status === 'ON_SALE' ? 'on_sale' : 'frozen');
-  }
-
-  /* 意向卡片三态：可提交 / 商品冻结 / 无商品 */
-  function setIntentState(state) {
-    show(els.intentForm, state === 'on_sale');
-    show(els.intentFrozenTip, state === 'frozen');
-    show(els.intentEmptyTip, state === 'empty');
-    if (state !== 'on_sale') {
-      els.intentName.value = '';
-      els.intentPhone.value = '';
-      fieldError(els.nameError);
-      fieldError(els.phoneError);
-    }
-  }
-
-  /* ==================== 提交意向 ==================== */
-
-  els.intentForm.addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    var name = els.intentName.value.trim();
-    var phone = els.intentPhone.value.trim();
-    var valid = true;
-
-    if (!name) { fieldError(els.nameError, '请输入姓名'); valid = false; }
-    else fieldError(els.nameError);
-
-    if (!phone) { fieldError(els.phoneError, '请输入联系电话'); valid = false; }
-    else fieldError(els.phoneError);
-
-    if (!valid) return;
-
-    App.setLoading(els.intentSubmit, true);
-    try {
-      var data = await Api.submitIntent(name, phone);
-      var code = data && data.code;
-      if (!code) throw Api.ApiError(0, '接口未返回口令码，请联系后端确认');
-
-      /* 口令码仅此一次展示 */
-      els.codeText.textContent = String(code).toUpperCase();
-      show(els.codeCard, true);
-      show(els.intentForm, false);
-      els.queryCode.value = String(code).toUpperCase(); /* 顺手预填查询框 */
-      els.codeCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      App.showToast('意向提交成功，请保存好口令码', 'success');
-    } catch (err) {
-      App.showToast(err.message, 'error');
-      /* 商品状态可能在填表期间变化，刷新一下 */
-      if (err.status === 400) loadProduct();
-    } finally {
-      App.setLoading(els.intentSubmit, false);
-    }
-  });
-
-  /* 复制口令码 */
-  els.copyBtn.addEventListener('click', async function () {
-    var code = els.codeText.textContent.trim();
-    try {
-      await navigator.clipboard.writeText(code);
-      App.showToast('口令码已复制到剪贴板', 'success');
-    } catch (e) {
-      /* 兼容不支持 Clipboard API 的环境 */
-      var ta = document.createElement('textarea');
-      ta.value = code;
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand('copy');
-        App.showToast('口令码已复制到剪贴板', 'success');
-      } catch (e2) {
-        App.showToast('复制失败，请手动抄写', 'error');
+      var stockText = '';
+      if (p.status === 'ON_SALE') {
+        stockText = (p.stock === 0 ? '已售罄' : '库存 ' + App.escapeHtml(p.stock));
       }
-      document.body.removeChild(ta);
-    }
-  });
 
-  /* 跳到查询区 */
-  els.toQueryBtn.addEventListener('click', function () {
-    els.queryCard = els.queryCard || $('query-card');
-    els.queryCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setTimeout(function () { els.queryCode.focus(); }, 350);
-  });
+      html +=
+        '<a class="product-card" href="product.html?id=' + encodeURIComponent(p.id) + '">' +
+          '<div class="pc-media">' +
+            '<img src="' + App.escapeHtml(cover) + '" alt="' + App.escapeHtml(p.name || '') + '" data-fallback="1">' +
+            (p.status !== 'ON_SALE' ? '<span class="pc-mask">已下架</span>' : '') +
+          '</div>' +
+          '<div class="pc-body">' +
+            '<div class="pc-name">' + App.escapeHtml(p.name || '未命名商品') + '</div>' +
+            '<div class="pc-meta">' +
+              (p.categoryName ? '<span class="pc-cat">' + App.escapeHtml(p.categoryName) + '</span>' : '') +
+              (stockText ? '<span class="pc-stock">' + stockText + '</span>' : '') +
+            '</div>' +
+            '<div class="pc-foot">' +
+              '<span class="pc-price"><span class="price-symbol">&yen;</span>' + App.escapeHtml(App.formatPrice(p.price)) + '</span>' +
+              '<span class="pc-time">' + App.escapeHtml(App.formatTime(p.createdAt)) + '</span>' +
+            '</div>' +
+          '</div>' +
+        '</a>';
+    });
 
-  /* ==================== 凭码查询 ==================== */
+    els.grid.innerHTML = html;
+    Array.prototype.forEach.call(els.grid.querySelectorAll('img[data-fallback]'), App.bindImageFallback);
 
-  els.queryCode.addEventListener('input', function () {
-    this.value = this.value.toUpperCase().replace(/\s+/g, '');
-    fieldError(els.queryCodeError);
-  });
+    App.show(els.empty, false);
+    App.show(els.body, true);
 
-  els.queryForm.addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    var code = els.queryCode.value.trim().toUpperCase();
-    if (!code) {
-      fieldError(els.queryCodeError, '请输入 8 位口令码');
-      return;
-    }
-    if (!App.CODE_PATTERN.test(code)) {
-      fieldError(els.queryCodeError, '口令码格式不对：应为 8 位大写字母或数字（不含 I / O / 0 / 1）');
-      return;
-    }
-
-    App.setLoading(els.querySubmit, true);
-    try {
-      var data = await Api.getIntent(code);
-      renderQueryResult(data);
-    } catch (err) {
-      if (err.status === 404) {
-        renderQueryError('口令码无效或已失效：交易成功、交易失败、已撤销的意向无法查询。');
-      } else {
-        App.showToast(err.message, 'error');
-      }
-    } finally {
-      App.setLoading(els.querySubmit, false);
-    }
-  });
-
-  function renderQueryResult(data) {
-    var intent = (data && data.intent) || {};
-    var product = (data && data.product) || {};
-
-    var positionHtml;
-    if (intent.status === 'IN_TRADE') {
-      positionHtml = '已进入交易环节';
-    } else if (intent.position !== null && intent.position !== undefined) {
-      positionHtml = '排队第 <span class="position-num">' + App.escapeHtml(intent.position) + '</span> 位';
-    } else {
-      positionHtml = '排队中';
-    }
-
-    els.queryResult.innerHTML =
-      '<div class="qr-head">' +
-        App.badgeHtml(App.INTENT_BADGE, intent.status) +
-        '<div class="qr-position">' + positionHtml + '</div>' +
-      '</div>' +
-      '<dl class="qr-meta">' +
-        '<div><dt>商品</dt><dd>' + App.escapeHtml(product.name || '-') + '</dd></div>' +
-        '<div><dt>意向状态</dt><dd>' + App.escapeHtml((App.INTENT_BADGE[intent.status] || [intent.status || '未知'])[0]) + '</dd></div>' +
-        '<div><dt>姓名</dt><dd>' + App.escapeHtml(intent.name || '-') + '</dd></div>' +
-        '<div><dt>联系电话</dt><dd>' + App.escapeHtml(intent.phone || '-') + '</dd></div>' +
-        '<div><dt>提交时间</dt><dd>' + App.escapeHtml(App.formatTime(intent.submittedAt)) + '</dd></div>' +
-      '</dl>';
-    show(els.queryResult, true);
+    App.renderPagination(els.pagination, page, size, total, function (target) {
+      state.page = target;
+      writeUrlState();
+      loadList();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
-  function renderQueryError(message) {
-    els.queryResult.innerHTML = '<div class="banner banner-error">' + App.escapeHtml(message) + '</div>';
-    show(els.queryResult, true);
-  }
+  /* ==================== 事件绑定 ==================== */
+
+  els.searchBtn.addEventListener('click', function () {
+    state.q = els.q.value.trim();
+    state.categoryId = els.category.value;
+    state.sort = els.sort.value;
+    state.page = 1;
+    writeUrlState();
+    loadList();
+  });
+
+  els.q.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); els.searchBtn.click(); }
+  });
+
+  els.category.addEventListener('change', function () {
+    state.categoryId = this.value;
+    state.page = 1;
+    writeUrlState();
+    loadList();
+  });
+
+  els.sort.addEventListener('change', function () {
+    state.sort = this.value;
+    state.page = 1;
+    writeUrlState();
+    loadList();
+  });
+
+  els.resetBtn.addEventListener('click', function () {
+    els.q.value = '';
+    els.category.value = '';
+    els.sort.value = (Api.SORT_OPTIONS && Api.SORT_OPTIONS[0] ? Api.SORT_OPTIONS[0].value : '');
+    state.q = '';
+    state.categoryId = '';
+    state.sort = els.sort.value;
+    state.page = 1;
+    writeUrlState();
+    loadList();
+  });
 
   /* ==================== 启动 ==================== */
-  loadProduct();
+
+  App.renderCustomerNav();
+  readUrlState();
+  els.q.value = state.q;
+  initSortSelect();
+  loadCategories();
+  loadList();
 })();

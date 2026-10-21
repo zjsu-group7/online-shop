@@ -15,113 +15,78 @@
       <span class="brand-mark">铺</span>
       <span class="brand-text">
         <strong>单品小铺</strong>
-        <small>一次只卖一件好物</small>
+        <small>校园二手 · 好物直达</small>
       </span>
     </a>
-    <a class="seller-entry" href="admin.html">卖家后台</a>
+
+    <div class="header-actions">
+      <!-- 未登录 -->
+      <div id="nav-guest" hidden>
+        <a class="btn btn-ghost btn-sm" href="login.html">登录</a>
+        <a class="btn btn-primary btn-sm" href="register.html">注册</a>
+      </div>
+      <!-- 已登录 -->
+      <div id="nav-user" hidden>
+        <span class="welcome">你好，<b id="nav-username">买家</b></span>
+        <a class="btn btn-ghost btn-sm" href="profile.html">个人中心</a>
+        <a class="btn btn-ghost btn-sm" href="orders.html">我的订单</a>
+        <button type="button" class="btn btn-ghost-danger btn-sm" id="nav-logout">退出</button>
+      </div>
+      <a class="seller-entry" href="admin.html">卖家后台</a>
+    </div>
   </div>
 </header>
 
 <main class="container main">
 
-  <!-- ① 当前在售商品 -->
-  <section class="card" id="product-card">
-    <div id="product-loading">
-      <div class="skeleton sk-product"></div>
+  <div id="offline-tip" class="banner banner-muted" hidden>
+    未连接到后端服务，当前为<b>静态骨架模式</b>：仅展示页面结构，接口联调后自动显示真实数据。
+  </div>
+
+  <!-- 筛选栏 -->
+  <section class="card filter-card">
+    <div class="filter-row">
+      <div class="filter-search">
+        <input class="input" id="filter-q" placeholder="搜索商品名称或描述" autocomplete="off">
+      </div>
+      <select class="input select" id="filter-category">
+        <option value="">全部分类</option>
+      </select>
+      <select class="input select" id="filter-sort"></select>
+      <button type="button" class="btn btn-primary" id="filter-search-btn">搜索</button>
+      <button type="button" class="btn btn-ghost" id="filter-reset">重置</button>
+    </div>
+    <div id="filter-summary" class="filter-summary" hidden></div>
+  </section>
+
+  <!-- 商品列表 -->
+  <section class="card">
+    <div id="list-loading">
+      <div class="grid">
+        <div class="skeleton sk-card"></div><div class="skeleton sk-card"></div>
+        <div class="skeleton sk-card"></div><div class="skeleton sk-card"></div>
+        <div class="skeleton sk-card"></div><div class="skeleton sk-card"></div>
+      </div>
     </div>
 
-    <div id="offline-tip" class="banner banner-muted" hidden>
-      未连接到后端服务，当前为<b>静态骨架模式</b>：仅展示页面结构，接口联调后自动显示真实数据。
-    </div>
-
-    <div id="product-empty" class="empty-state" hidden>
+    <div id="list-empty" class="empty-state" hidden>
       <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 8.3L12 13l8.7-4.7"/><path d="M12 13v9"/><path d="M7.5 5.5l9 5"/>
+        <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 8.3L12 13l8.7-4.7"/><path d="M12 13v9"/>
       </svg>
-      <p>店主正在备货，暂无商品在售</p>
-      <p style="font-size:12.5px;color:var(--text-muted)">商品上架后会第一时间出现在这里，记得回来看看哦</p>
+      <p>没有找到符合条件的商品</p>
+      <p style="font-size:12.5px;color:var(--text-muted)">换个关键词或分类试试吧</p>
     </div>
 
-    <div id="product-body" hidden>
-      <div class="product-layout">
-        <div class="product-media">
-          <img id="product-image" alt="商品图片">
-        </div>
-        <div>
-          <div class="product-title-row">
-            <h2 class="product-name" id="product-name"></h2>
-            <span id="product-status"></span>
-          </div>
-          <p class="product-desc" id="product-desc"></p>
-          <div class="product-price"><span class="price-symbol">&yen;</span><span id="product-price"></span></div>
-        </div>
-      </div>
+    <div id="list-body" hidden>
+      <div class="grid" id="product-grid"></div>
+      <div class="pagination" id="pagination" hidden></div>
     </div>
-  </section>
-
-  <!-- ② 提交购买意向 -->
-  <section class="card" id="intent-card">
-    <h3 class="card-title">提交购买意向</h3>
-    <p class="card-sub">看中了就留下联系方式，先到先得排队；提交后系统发放专属口令码</p>
-
-    <div id="intent-empty-tip" class="banner banner-info" hidden>
-      暂无商品在售，无法提交购买意向，请等店主上架商品后再来。
-    </div>
-    <div id="intent-frozen-tip" class="banner banner-warning" hidden>
-      该商品已进入交易流程，暂停接收新的购买意向，欢迎下次再来。
-    </div>
-
-    <form id="intent-form" novalidate hidden>
-      <div class="form-row">
-        <div class="form-field">
-          <label for="intent-name">姓名</label>
-          <input class="input" id="intent-name" maxlength="50" placeholder="请输入您的姓名" autocomplete="name">
-          <p class="field-error" id="intent-name-error" hidden></p>
-        </div>
-        <div class="form-field">
-          <label for="intent-phone">联系电话</label>
-          <input class="input" id="intent-phone" maxlength="20" placeholder="请输入手机号" inputmode="tel" autocomplete="tel">
-          <p class="field-error" id="intent-phone-error" hidden></p>
-        </div>
-      </div>
-      <button type="submit" class="btn btn-primary btn-block" id="intent-submit">提交购买意向</button>
-    </form>
-  </section>
-
-  <!-- ③ 口令码展示（提交成功后出现） -->
-  <section class="card code-card" id="code-card" hidden>
-    <div class="code-success-head">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9.5"/>
-      </svg>
-      意向提交成功，这是您的排队口令码
-    </div>
-    <div class="code-box"><code id="code-text"></code></div>
-    <p class="code-warning">口令码<b>仅此一次展示</b>，请截图或抄写妥善保存；凭它可查询排队位次，也是后续交易的凭证。</p>
-    <div class="code-actions">
-      <button type="button" class="btn btn-ghost" id="copy-btn">复制口令码</button>
-      <button type="button" class="btn btn-primary" id="to-query-btn">查询排队位次</button>
-    </div>
-  </section>
-
-  <!-- ④ 凭口令码查询 -->
-  <section class="card" id="query-card">
-    <h3 class="card-title">口令码查询</h3>
-    <p class="card-sub">输入提交意向时获得的 8 位口令码，查询排队位次与状态</p>
-    <form id="query-form" novalidate>
-      <div class="query-row">
-        <input class="input" id="query-code" maxlength="8" placeholder="8 位口令码" autocomplete="off" spellcheck="false">
-        <button type="submit" class="btn btn-primary" id="query-submit">查询</button>
-      </div>
-      <p class="field-error" id="query-code-error" hidden></p>
-    </form>
-    <div id="query-result" hidden></div>
   </section>
 
 </main>
 
 <footer class="site-footer">
-  第 7 组 · 在线购物系统 · 迭代 1（MVP）· 买家端
+  第 7 组 · 在线购物系统 · 迭代 2（挑战需求 A）· 买家端
 </footer>
 
 <script src="js/common.js"></script>
