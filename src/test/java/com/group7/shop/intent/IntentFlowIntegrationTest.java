@@ -2,8 +2,10 @@ package com.group7.shop.intent;
 
 import com.group7.shop.dto.BuyerIntentView;
 import com.group7.shop.dto.PublishProductRequest;
+import com.group7.shop.entity.Category;
 import com.group7.shop.entity.Intent;
 import com.group7.shop.entity.IntentStatus;
+import com.group7.shop.repository.CategoryRepository;
 import com.group7.shop.repository.IntentRepository;
 import com.group7.shop.service.IntentCodeGenerator;
 import com.group7.shop.service.IntentService;
@@ -55,13 +57,19 @@ class IntentFlowIntegrationTest {
     @Autowired private IntentService intentService;
     @Autowired private IntentRepository intentRepository;
     @Autowired private IntentCodeGenerator codeGenerator;
+    @Autowired private CategoryRepository categoryRepository;
 
     private Long productId;
+
+    private Long categoryId() {
+        Category root = categoryRepository.save(new Category("测试一级", null, 0));
+        return categoryRepository.save(new Category("测试二级", root.getId(), 0)).getId();
+    }
 
     @BeforeEach
     void publishProduct() {
         productId = productService.publish(new PublishProductRequest(
-                "测试手机", "九成新测试机", new BigDecimal("1999.99"), null)).id();
+                "测试手机", "九成新测试机", new BigDecimal("1999.99"), categoryId(), 1, null, null)).id();
     }
 
     /* ---------- 辅助方法 ---------- */
