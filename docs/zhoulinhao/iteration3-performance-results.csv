@@ -1,0 +1,4 @@
+"Endpoint","Requests","AverageMs","P95Ms","MinMs","MaxMs","ThroughputRps","Errors","ErrorRatePercent","AverageUnder2Seconds"
+"product-list","100","11.64","15.24","6.45","40.28","82.74","0","0","True"
+"search-test","100","12.28","15.56","8.04","23.25","79.03","0","0","True"
+"search-phone","100","10.9","13.76","7.1","16.88","88.79","0","0","True"

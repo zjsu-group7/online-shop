@@ -285,6 +285,83 @@ class ProductWorkflowIntegrationTest {
     }
 
     @Test
+    void iteration3SuccessRegressionCoversBrowseFreezeAndStateLinkage() throws Exception {
+        ProductView product = publish("回归成功商品", "浏览到成交", "66.00");
+        Intent selected = waitingIntent(product.id(), "买家甲", "13800000000", "hash-success-a");
+        Intent waiting = waitingIntent(product.id(), "买家乙", "13900000000", "hash-success-b");
+        String token = loginAsDefaultSeller();
+
+        mockMvc.perform(get("/api/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(product.id()));
+
+        mockMvc.perform(post("/api/seller/products/{id}/deal", product.id())
+                        .header("X-Token", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"intentId\":" + selected.getId() + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.product.status").value("FROZEN"))
+                .andExpect(jsonPath("$.data.intentStatus").value("IN_TRADE"));
+
+        mockMvc.perform(get("/api/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+
+        mockMvc.perform(post("/api/seller/products/{id}/result", product.id())
+                        .header("X-Token", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\":\"SUCCESS\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.product.status").value("OFF_SHELF"))
+                .andExpect(jsonPath("$.data.product.stock").value(0))
+                .andExpect(jsonPath("$.data.intentStatus").value("TRADED"));
+
+        mockMvc.perform(get("/api/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+        assertThat(intentRepository.findById(selected.getId()).orElseThrow().getStatus())
+                .isEqualTo(IntentStatus.TRADED);
+        assertThat(intentRepository.findById(waiting.getId()).orElseThrow().getStatus())
+                .isEqualTo(IntentStatus.FAILED);
+    }
+
+    @Test
+    void iteration3FailureRegressionRestoresBrowseAndRequeuesBuyer() throws Exception {
+        ProductView product = publish("回归失败商品", "失败后恢复", "77.00");
+        Intent selected = waitingIntent(product.id(), "买家甲", "13800000000", "hash-fail-a");
+        Intent waiting = waitingIntent(product.id(), "买家乙", "13900000000", "hash-fail-b");
+        String token = loginAsDefaultSeller();
+
+        mockMvc.perform(post("/api/seller/products/{id}/deal", product.id())
+                        .header("X-Token", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"intentId\":" + selected.getId() + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.product.status").value("FROZEN"));
+
+        mockMvc.perform(post("/api/seller/products/{id}/result", product.id())
+                        .header("X-Token", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\":\"FAIL\",\"failedAction\":\"REQUEUE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.product.status").value("ON_SALE"))
+                .andExpect(jsonPath("$.data.product.stock").value(1))
+                .andExpect(jsonPath("$.data.intentStatus").value("WAITING"));
+
+        mockMvc.perform(get("/api/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(product.id()));
+
+        List<Intent> queue = intentRepository
+                .findByProductIdAndStatusOrderBySubmittedAtAscIdAsc(product.id(), IntentStatus.WAITING);
+        assertThat(queue).hasSize(2);
+        assertThat(queue.get(0).getId()).isEqualTo(waiting.getId());
+        assertThat(queue.get(1).getId()).isEqualTo(selected.getId());
+    }
+
+    @Test
     void historyEndpointKeepsProductFieldsAtItemLevel() throws Exception {
         ProductView product = publish("历史商品", "接口契约", "88.00");
         productService.offshelf(product.id());

@@ -167,6 +167,61 @@ class BrowseAndCustomerQueryIntegrationTest {
     }
 
     @Test
+    @DisplayName("搜索边界：无结果、关键词过长、下划线与反斜杠按普通字符匹配")
+    void searchBoundaryValuesAreHandledExplicitly() throws Exception {
+        saveProduct("型号_A\\B", "特殊字符", 10, categoryA,
+                ProductStatus.ON_SALE, Instant.parse("2026-10-21T01:00:00Z"));
+        saveProduct("型号XAB", "普通字符", 20, categoryA,
+                ProductStatus.ON_SALE, Instant.parse("2026-10-21T02:00:00Z"));
+
+        mockMvc.perform(get("/api/products").param("q", "不存在的商品"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+        mockMvc.perform(get("/api/products").param("q", "_"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].name").value("型号_A\\B"));
+        mockMvc.perform(get("/api/products").param("q", "\\"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].name").value("型号_A\\B"));
+        mockMvc.perform(get("/api/products").param("q", "a".repeat(101)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
+    @DisplayName("分页与类别边界：允许 size 1/100，越界页和无匹配类别返回空列表")
+    void paginationAndCategoryBoundariesReturnStablePageShape() throws Exception {
+        saveProduct("较早商品", "", 10, categoryA,
+                ProductStatus.ON_SALE, Instant.parse("2026-10-21T01:00:00Z"));
+        saveProduct("较晚商品", "", 20, categoryA,
+                ProductStatus.ON_SALE, Instant.parse("2026-10-21T02:00:00Z"));
+
+        mockMvc.perform(get("/api/products")
+                        .param("page", "3").param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.page").value(3))
+                .andExpect(jsonPath("$.data.size").value(1))
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.items.length()").value(0));
+        mockMvc.perform(get("/api/products")
+                        .param("size", "100").param("sort", "publishedAt,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(2))
+                .andExpect(jsonPath("$.data.items[0].name").value("较早商品"));
+        mockMvc.perform(get("/api/products").param("categoryId", categoryB.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+        mockMvc.perform(get("/api/products").param("categoryId", "999999"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+        mockMvc.perform(get("/api/products").param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
     @DisplayName("商品详情返回有序多图与过滤后的富文本")
     void detailReturnsOrderedImagesAndSanitizedRichText() throws Exception {
         var view = productService.publish(new PublishProductRequest(
