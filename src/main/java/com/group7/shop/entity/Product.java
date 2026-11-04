@@ -145,9 +145,18 @@ public class Product {
         this.stock = stock;
     }
 
+    /**
+     * 读取库存，NULL 按 0 处理。
+     * 迭代 1 的存量商品没有 stock 列，迁移后该字段为 NULL；直接拆箱会 NPE，
+     * 因此所有规则判断统一走本方法（迭代 3 回归修复，负责人：华天遥）。
+     */
+    public int stockOrZero() {
+        return stock == null ? 0 : stock;
+    }
+
     /** 交易成功扣减 1 件库存；调用前由服务层校验库存 > 0。 */
     public void deductOneStock() {
-        this.stock = this.stock - 1;
+        this.stock = stockOrZero() - 1;
     }
 
     /** 重新上架：由已下架回到在售，清空关闭信息；库存由服务层校验 > 0。 */

@@ -135,7 +135,7 @@ public class ProductService {
         if (product.getFrozenBy() != FrozenBy.MANUAL) {
             throw BusinessException.conflict("商品冻结来源不正确，无法手动解冻");
         }
-        if (product.getStock() <= 0) {
+        if (product.stockOrZero() <= 0) {
             throw BusinessException.badRequest("库存为 0，请先补货再解冻");
         }
         product.unfreezeManually();
@@ -175,7 +175,7 @@ public class ProductService {
         if (product.getStatus() != ProductStatus.OFF_SHELF) {
             throw BusinessException.conflict("仅已下架商品可以重新上架");
         }
-        if (product.getStock() <= 0) {
+        if (product.stockOrZero() <= 0) {
             throw BusinessException.badRequest("库存为 0，请先补货再上架");
         }
         product.reopen();
