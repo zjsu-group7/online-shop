@@ -125,6 +125,7 @@
   function resolveImageUrl(img) {
     if (!img) return '';
     if (/^(data:|https?:|\/\/)/i.test(String(img))) return img;
+    if (String(img).charAt(0) === '/') return String(img);
     return global.Api ? global.Api.uploadUrl(img) : String(img);
   }
 
