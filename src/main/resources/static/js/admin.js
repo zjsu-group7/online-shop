@@ -76,6 +76,12 @@
     productsBody: $('products-body'),
     productsTbody: $('products-tbody'),
     productsCount: $('products-count'),
+    /* 交易队列 */
+    queueLoading: $('queue-loading'),
+    queueEmpty: $('queue-empty'),
+    queueBody: $('queue-body'),
+    queueTbody: $('queue-tbody'),
+    queueCount: $('queue-count'),
     /* 客户 */
     customersLoading: $('customers-loading'),
     customersEmpty: $('customers-empty'),
@@ -169,6 +175,7 @@
   function refreshAll() {
     loadCategories();
     loadProducts();
+    loadQueue();
     loadCustomers();
   }
 
@@ -596,6 +603,98 @@
     await runAction(pendingProductId, function (pid) {
       return Api.markResult(pid, 'FAIL', action);
     }, action === 'REQUEUE' ? '交易失败，该意向已重新排队' : '交易失败，该意向已作废');
+  });
+
+  /* ==================== 交易队列（意向列表 + 发起交易） ==================== */
+
+  var QUEUE_BADGE = {
+    WAITING: ['排队中', 'badge-waiting'],
+    IN_TRADE: ['交易中', 'badge-frozen'],
+    TRADED: ['已成交', 'badge-traded'],
+    FAILED: ['已失败', 'badge-failed'],
+    CANCELLED: ['已撤销', 'badge-offshelf']
+  };
+
+  async function loadQueue() {
+    App.show(els.queueLoading, true);
+    try {
+      var data = await Api.getOverview();
+      /* 迭代 2 多商品：products 为全部在售/交易中商品及各自队列；
+         旧后端无 products 字段时回退单商品视图 */
+      var list = (data && data.products) ||
+        ((data && data.product) ? [{ product: data.product, queue: data.queue || [] }] : []);
+      els.queueCount.textContent = list.length ? ('在售 ' + list.length + ' 件商品') : '';
+      renderQueue(list);
+      App.show(els.offlineTip, false);
+    } catch (e) {
+      if (Api.isAuthError(e)) { handleAuthExpired(); return; }
+      App.show(els.queueLoading, false);
+      App.showToast(e.message, 'error');
+    }
+  }
+
+  function renderQueue(list) {
+    var total = 0;
+    list.forEach(function (g) { total += ((g.queue && g.queue.length) || 0); });
+    if (!total) {
+      App.show(els.queueBody, false);
+      App.show(els.queueEmpty, true);
+      App.show(els.queueLoading, false);
+      return;
+    }
+    var html = '';
+    list.forEach(function (g) {
+      var product = g.product || {};
+      var queue = g.queue || [];
+      html += '<tr><td colspan="6"><strong>商品：' + App.escapeHtml(product.name || ('#' + product.id)) + '</strong></td></tr>';
+      if (!queue.length) {
+        html += '<tr><td colspan="6"><span class="field-hint">暂无排队意向</span></td></tr>';
+        return;
+      }
+      queue.forEach(function (it) {
+        var ops;
+        if (it.status === 'WAITING' && product.status === 'ON_SALE') {
+          ops = '<button type="button" class="btn btn-primary btn-xs" data-deal-intent="' +
+            App.escapeHtml(it.id) + '" data-deal-product="' + App.escapeHtml(product.id) + '">发起交易</button>';
+        } else if (it.status === 'WAITING') {
+          /* 商品交易中：一次只能进行一笔交易，其余排队买家等本次出结果后再处理 */
+          ops = '<span class="field-hint">等待当前交易出结果</span>';
+        } else if (it.status === 'IN_TRADE') {
+          ops = '<span class="field-hint">等待标记结果</span>';
+        } else {
+          ops = '';
+        }
+        html += '<tr>' +
+          '<td>' + App.escapeHtml(it.name || '-') + '</td>' +
+          '<td>' + App.escapeHtml(it.phone || '-') + '</td>' +
+          '<td>' + (it.position == null ? '-' : App.escapeHtml(it.position)) + '</td>' +
+          '<td>' + App.badgeHtml(QUEUE_BADGE, it.status) + '</td>' +
+          '<td>' + App.escapeHtml(App.formatTime(it.submittedAt)) + '</td>' +
+          '<td>' + ops + '</td>' +
+        '</tr>';
+      });
+    });
+    els.queueTbody.innerHTML = html;
+    App.show(els.queueEmpty, false);
+    App.show(els.queueBody, true);
+    App.show(els.queueLoading, false);
+  }
+
+  els.queueTbody.addEventListener('click', async function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('[data-deal-intent]') : null;
+    if (!btn) return;
+    var intentId = btn.getAttribute('data-deal-intent');
+    var pid = btn.getAttribute('data-deal-product');
+    if (!confirm('选定该买家进入交易？商品将冻结为「交易中」，之后请在商品表标记交易结果。')) return;
+    try {
+      await Api.startTrade(pid, intentId);
+      App.showToast('已选定买家，商品进入交易中', 'success');
+      loadQueue();
+      loadProducts();
+    } catch (err) {
+      if (Api.isAuthError(err)) { handleAuthExpired(); return; }
+      App.showToast(err.message, 'error');
+    }
   });
 
   /* ==================== 客户列表与购买历史 ==================== */

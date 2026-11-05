@@ -176,6 +176,25 @@
           </div>
         </section>
 
+        <!-- 交易队列 -->
+        <section class="card">
+          <div class="card-title-row">
+            <h3 class="card-title">交易队列</h3>
+            <span class="card-sub" id="queue-count" style="margin:0"></span>
+          </div>
+          <p class="card-sub">买家提交的意向按提交顺序排队；点「发起交易」选定买家后商品进入交易中，再在商品表标记成功 / 失败</p>
+          <div id="queue-loading"><div class="skeleton sk-line"></div></div>
+          <div id="queue-empty" class="empty-state" hidden><p>暂无排队意向</p></div>
+          <div id="queue-body" hidden>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>买家</th><th>联系电话</th><th>位次</th><th>状态</th><th>提交时间</th><th>操作</th></tr></thead>
+                <tbody id="queue-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <!-- 客户列表 -->
         <section class="card">
           <div class="card-title-row">
