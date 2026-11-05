@@ -78,7 +78,7 @@ class StockStatusRuleTest {
     }
 
     private Long submitIntent(Long productId, String name) {
-        intentService.submit(new SubmitIntentRequest(name, "13800000001"));
+        intentService.submit(new SubmitIntentRequest(productId, name, "13800000001"));
         return intentRepository.findByProductIdAndStatusOrderBySubmittedAtAscIdAsc(
                         productId, IntentStatus.WAITING).stream()
                 .filter(i -> i.getName().equals(name))
