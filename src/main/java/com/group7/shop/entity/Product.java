@@ -40,6 +40,9 @@ public class Product {
     /** 库存数量；成交后减 1，为 0 时在售商品自动下架。 */
     private Integer stock;
 
+    /** 已锁定的库存数量（下单锁定、成交扣减、取消释放）；对外「库存」仍以 stock 为准。 */
+    private Integer lockedStock = 0;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProductStatus status = ProductStatus.ON_SALE;
@@ -94,6 +97,9 @@ public class Product {
         }
         if (status == null) {
             status = ProductStatus.ON_SALE;
+        }
+        if (lockedStock == null) {
+            lockedStock = 0;
         }
     }
 
@@ -150,6 +156,29 @@ public class Product {
         this.stock = this.stock - 1;
     }
 
+    /* ==================== 库存锁定（挑战需求 B，负责人：李婉婷） ==================== */
+
+    /** 可售库存 = 库存 − 已锁定；下单校验以此为准。 */
+    public int availableStock() {
+        return (stock == null ? 0 : stock) - (lockedStock == null ? 0 : lockedStock);
+    }
+
+    /** 下单锁定 n 件库存（调用前由服务层校验 availableStock() >= n）。 */
+    public void lockStock(int n) {
+        this.lockedStock = (lockedStock == null ? 0 : lockedStock) + n;
+    }
+
+    /** 取消订单时释放 n 件锁定库存。 */
+    public void unlockStock(int n) {
+        this.lockedStock = Math.max(0, (lockedStock == null ? 0 : lockedStock) - n);
+    }
+
+    /** 交易完成时真正扣减：库存 −n 并同步释放 n 件锁定。 */
+    public void commitStock(int n) {
+        this.stock = (stock == null ? 0 : stock) - n;
+        this.lockedStock = Math.max(0, (lockedStock == null ? 0 : lockedStock) - n);
+    }
+
     /** 重新上架：由已下架回到在售，清空关闭信息；库存由服务层校验 > 0。 */
     public void reopen() {
         this.status = ProductStatus.ON_SALE;
@@ -180,6 +209,8 @@ public class Product {
     public void setClosedAt(Instant closedAt) { this.closedAt = closedAt; }
     public Long getCategoryId() { return categoryId; }
     public Integer getStock() { return stock; }
+    public Integer getLockedStock() { return lockedStock; }
     public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
     public void setStock(Integer stock) { this.stock = stock; }
+    public void setLockedStock(Integer lockedStock) { this.lockedStock = lockedStock; }
 }
