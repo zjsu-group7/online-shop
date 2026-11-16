@@ -316,6 +316,14 @@
       });
     },
 
+    /* 发起交易：卖家从意向队列中选定买家，商品进入交易冻结
+       入参 { intentId }；选定后商品状态变 FROZEN，需再标记交易结果 */
+    startTrade: function (productId, intentId) {
+      return request('/api/seller/products/' + encodeURIComponent(productId) + '/deal', {
+        method: 'POST', auth: 'seller', body: { intentId: intentId }
+      });
+    },
+
     /* 修改库存：{ stock } */
     updateStock: function (productId, stock) {
       return request('/api/seller/products/' + encodeURIComponent(productId) + '/stock', {

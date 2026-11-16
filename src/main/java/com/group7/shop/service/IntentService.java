@@ -62,7 +62,9 @@ public class IntentService {
             throw BusinessException.badRequest("姓名与联系电话均为必填");
         }
 
-        Product product = currentActiveProduct()
+        Product product = (request.productId() == null
+                        ? currentActiveProduct()
+                        : productRepository.findById(request.productId()))
                 .orElseThrow(() -> BusinessException.badRequest("暂无商品在售"));
         if (product.getStatus() != ProductStatus.ON_SALE) {
             throw BusinessException.badRequest("商品交易中，暂停接收新意向");

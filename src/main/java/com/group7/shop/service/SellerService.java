@@ -81,34 +81,46 @@ public class SellerService {
 
     @Transactional(readOnly = true)
     public SellerOverview overview(Seller seller) {
-        Product product = productRepository.findByStatusInOrderByCreatedAtDesc(ACTIVE_STATUSES)
-                .stream().findFirst().orElse(null);
+        // 迭代 2 多商品适配：返回全部在售/交易中商品及各自的意向队列
+        List<Product> actives = productRepository.findByStatusInOrderByCreatedAtDesc(ACTIVE_STATUSES);
+        Product product = actives.isEmpty() ? null : actives.get(0);
         ProductView productView = product == null ? null : ProductView.from(product);
 
-        List<IntentView> queue = new ArrayList<>();
-        if (product != null) {
-            List<Intent> intents = intentRepository.findByProductIdOrderBySubmittedAtAsc(product.getId());
-            int position = 0;
-            for (Intent intent : intents) {
-                if (intent.getStatus() == IntentStatus.WAITING) {
-                    position++;
-                }
-                if (intent.getStatus() == IntentStatus.WAITING || intent.getStatus() == IntentStatus.IN_TRADE) {
-                    // 已进入交易的意向 position 置空
-                    Integer pos = intent.getStatus() == IntentStatus.IN_TRADE ? null : position;
-                    queue.add(new IntentView(
-                            intent.getId(),
-                            intent.getName(),
-                            intent.getPhone(),
-                            intent.getStatus(),
-                            pos,
-                            intent.getSubmittedAt()));
-                }
-            }
+        List<SellerOverview.ProductQueue> products = new ArrayList<>();
+        for (Product p : actives) {
+            List<IntentView> q = queueOf(p.getId());
+            products.add(new SellerOverview.ProductQueue(ProductView.from(p), q));
         }
 
-        boolean canPublish = !productRepository.existsByStatusIn(ACTIVE_STATUSES);
-        return new SellerOverview(productView, queue, canPublish);
+        // 兼容字段：最新一件在售商品的队列
+        List<IntentView> queue = product == null ? new ArrayList<>() : queueOf(product.getId());
+
+        boolean canPublish = actives.isEmpty();
+        return new SellerOverview(productView, queue, products, canPublish);
+    }
+
+    /** 某商品的活跃意向队列：WAITING + IN_TRADE，按提交时间正序，WAITING 带位次。 */
+    private List<IntentView> queueOf(Long productId) {
+        List<IntentView> queue = new ArrayList<>();
+        List<Intent> intents = intentRepository.findByProductIdOrderBySubmittedAtAsc(productId);
+        int position = 0;
+        for (Intent intent : intents) {
+            if (intent.getStatus() == IntentStatus.WAITING) {
+                position++;
+            }
+            if (intent.getStatus() == IntentStatus.WAITING || intent.getStatus() == IntentStatus.IN_TRADE) {
+                // 已进入交易的意向 position 置空
+                Integer pos = intent.getStatus() == IntentStatus.IN_TRADE ? null : position;
+                queue.add(new IntentView(
+                        intent.getId(),
+                        intent.getName(),
+                        intent.getPhone(),
+                        intent.getStatus(),
+                        pos,
+                        intent.getSubmittedAt()));
+            }
+        }
+        return queue;
     }
 
     private String generateToken() {
