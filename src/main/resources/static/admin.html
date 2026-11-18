@@ -195,6 +195,32 @@
           </div>
         </section>
 
+        <!-- 订单管理（迭代 3） -->
+        <section class="card">
+          <div class="card-title-row">
+            <h3 class="card-title">订单管理</h3>
+            <span class="card-sub" id="seller-orders-count" style="margin:0"></span>
+          </div>
+          <p class="card-sub">状态单向推进：客户下单 → 商家确认 → 备货完成 → 开始发货 → 交易完成；交易完成前可整单取消</p>
+          <div style="margin-bottom:10px">
+            <select class="input" id="seller-orders-filter" style="max-width:200px">
+              <option value="">全部状态</option>
+              <option value="CUSTOMER_SUBMITTED">客户下单</option>
+              <option value="SELLER_CONFIRMED">商家确认</option>
+              <option value="READY_TO_SHIP">备货完成</option>
+              <option value="SHIPPED">开始发货</option>
+              <option value="COMPLETED">交易完成</option>
+              <option value="CANCELLED">已取消</option>
+            </select>
+          </div>
+          <div id="seller-orders-loading"><div class="skeleton sk-line"></div><div class="skeleton sk-line short"></div></div>
+          <div id="seller-orders-empty" class="empty-state" hidden><p>暂无订单</p></div>
+          <div id="seller-orders-body" hidden>
+            <div id="seller-orders-list"></div>
+            <div id="seller-orders-pagination" style="margin-top:12px"></div>
+          </div>
+        </section>
+
         <!-- 客户列表 -->
         <section class="card">
           <div class="card-title-row">
@@ -233,7 +259,7 @@
 </main>
 
 <footer class="site-footer">
-  第 7 组 · 在线购物系统 · 迭代 2（挑战需求 A）· 卖家后台
+  第 7 组 · 在线购物系统 · 迭代 4（挑战需求 B）· 卖家后台
 </footer>
 
 <!-- 库存修改弹窗 -->

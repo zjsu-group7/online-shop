@@ -22,7 +22,8 @@
       <div id="nav-user" hidden>
         <span class="welcome">你好，<b id="nav-username">买家</b></span>
         <a class="btn btn-ghost btn-sm" href="profile.html">个人中心</a>
-        <a class="btn btn-ghost btn-sm" href="orders.html">我的订单</a>
+        <a class="btn btn-ghost btn-sm" href="cart.html">购物车</a>
+        <a class="btn btn-ghost btn-sm" href="favorite.html">收藏</a>
         <button type="button" class="btn btn-ghost-danger btn-sm" id="nav-logout">退出</button>
       </div>
       <a class="seller-entry" href="admin.html">卖家后台</a>
@@ -37,7 +38,7 @@
       <h3 class="card-title">我的订单</h3>
       <span class="card-sub" id="orders-count" style="margin:0"></span>
     </div>
-    <p class="card-sub">仅展示已出结果（交易成功 / 交易失败）的下单记录</p>
+    <p class="card-sub">订单状态单向推进：客户下单 → 商家确认 → 备货完成 → 开始发货 → 交易完成；开始发货前可整单取消</p>
 
     <div id="orders-loading">
       <div class="skeleton sk-line"></div>
@@ -49,31 +50,20 @@
       <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M9 5h6a2 2 0 0 1 2 2v12l-3-2-3 2-3-2-3 2V7a2 2 0 0 1 2-2z"/><path d="M9 12h6"/>
       </svg>
-      <p>还没有已出结果的订单</p>
-      <p style="font-size:12.5px;color:var(--text-muted)">下单后需等待店主确认交易结果，成功后会显示在这里</p>
+      <p>还没有订单</p>
+      <p style="font-size:12.5px;color:var(--text-muted)">去购物车勾选商品提交下单吧</p>
     </div>
 
     <div id="orders-body" hidden>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>商品</th>
-              <th>下单时间</th>
-              <th>交易结果</th>
-              <th>交易时间</th>
-            </tr>
-          </thead>
-          <tbody id="orders-tbody"></tbody>
-        </table>
-      </div>
+      <div id="orders-list"></div>
+      <div id="orders-pagination" style="margin-top:14px"></div>
     </div>
   </section>
 
 </main>
 
 <footer class="site-footer">
-  第 7 组 · 在线购物系统 · 迭代 2（挑战需求 A）· 买家端
+  第 7 组 · 在线购物系统 · 迭代 4（挑战需求 B）· 买家端
 </footer>
 
 <script src="js/common.js"></script>

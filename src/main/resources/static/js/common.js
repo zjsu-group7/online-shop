@@ -116,6 +116,28 @@
     FAILED: ['交易失败', 'badge-failed']
   };
 
+  /* 迭代 4 · 订单五态状态机 + 已取消终态（与周琳皓订单核心域严格一致）
+     CUSTOMER_SUBMITTED → SELLER_CONFIRMED → READY_TO_SHIP → SHIPPED → COMPLETED，另有 CANCELLED */
+  var ORDER_STATUS = {
+    CUSTOMER_SUBMITTED: ['客户下单', 'badge-order-created'],
+    SELLER_CONFIRMED:   ['商家确认', 'badge-order-confirmed'],
+    READY_TO_SHIP:      ['备货完成', 'badge-order-prepared'],
+    SHIPPED:            ['开始发货', 'badge-order-shipped'],
+    COMPLETED:          ['交易完成', 'badge-traded'],
+    CANCELLED:          ['已取消', 'badge-failed'],
+    /* 兼容旧口径（迭代2 意向结果），保留展示能力 */
+    SUCCESS:            ['交易成功', 'badge-traded'],
+    FAIL:               ['交易失败', 'badge-failed'],
+    FAILED:             ['交易失败', 'badge-failed']
+  };
+  /* 推进动作 → [按钮文案, 目标状态]。按钮显隐以后端 allowedActions 为准，此表仅用于文案 */
+  var ORDER_ACTIONS = {
+    CONFIRM:  ['商家确认', 'SELLER_CONFIRMED'],
+    PACK:     ['备货完成', 'READY_TO_SHIP'],
+    SHIP:     ['开始发货', 'SHIPPED'],
+    COMPLETE: ['交易完成', 'COMPLETED']
+  };
+
   function badgeHtml(map, key) {
     var item = map[key] || [key || '未知', 'badge-offshelf'];
     return '<span class="badge ' + item[1] + '">' + escapeHtml(item[0]) + '</span>';
@@ -279,6 +301,8 @@
     badgeHtml: badgeHtml,
     PRODUCT_BADGE: PRODUCT_BADGE,
     ORDER_BADGE: ORDER_BADGE,
+    ORDER_STATUS: ORDER_STATUS,
+    ORDER_ACTIONS: ORDER_ACTIONS,
     resolveImageUrl: resolveImageUrl,
     PLACEHOLDER_IMAGE: PLACEHOLDER_IMAGE,
     bindImageFallback: bindImageFallback,

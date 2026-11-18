@@ -84,6 +84,14 @@
     queueCount: $('queue-count'),
     /* 客户 */
     customersLoading: $('customers-loading'),
+    /* 订单管理（迭代 3） */
+    soLoading: $('seller-orders-loading'),
+    soEmpty: $('seller-orders-empty'),
+    soBody: $('seller-orders-body'),
+    soList: $('seller-orders-list'),
+    soPager: $('seller-orders-pagination'),
+    soCount: $('seller-orders-count'),
+    soFilter: $('seller-orders-filter'),
     customersEmpty: $('customers-empty'),
     customersBody: $('customers-body'),
     customersTbody: $('customers-tbody'),
@@ -177,7 +185,132 @@
     loadProducts();
     loadQueue();
     loadCustomers();
+    loadSellerOrders();
   }
+
+  /* ==================== 订单管理（迭代 3 · 五态状态机） ==================== */
+
+  var SO_PAGE_SIZE = 10;
+  var soPage = 1;
+
+  els.soFilter.addEventListener('change', function () {
+    soPage = 1;
+    loadSellerOrders();
+  });
+
+  async function loadSellerOrders() {
+    App.show(els.soLoading, true);
+    App.show(els.soBody, false);
+    App.show(els.soEmpty, false);
+    try {
+      var data = await Api.listSellerOrders(soPage, SO_PAGE_SIZE, els.soFilter.value || '');
+      var items = (data && data.items) || [];
+      els.soCount.textContent = (data && data.total) ? ('共 ' + data.total + ' 单') : '';
+      App.show(els.soEmpty, items.length === 0);
+      App.show(els.soBody, items.length > 0);
+      if (items.length) renderSellerOrders(items, data && data.total);
+    } catch (err) {
+      if (err.status === 401) handleAuthExpired();
+      else App.showToast(err.message || '订单加载失败', 'error');
+    } finally {
+      App.show(els.soLoading, false);
+    }
+  }
+
+  /* 卖家可取消窗口：COMPLETED 前（比买家多一个 SHIPPED） */
+  function sellerCanCancel(status) {
+    return status !== 'COMPLETED' && status !== 'CANCELLED';
+  }
+
+  function renderSellerOrders(items, total) {
+    var html = '';
+    items.forEach(function (o) {
+      var rows = (o.items || []).map(function (it) {
+        return '<li>' + App.escapeHtml(it.productName || '商品') +
+          ' × ' + it.quantity + '　￥' + App.formatPrice(it.unitPrice) +
+          (it.available === false ? ' <span class="badge badge-failed">无货</span>' : '') + '</li>';
+      }).join('');
+
+      /* 推进按钮：以后端 allowedActions 为唯一依据（前端不自写状态判断） */
+      var actions = o.allowedActions || [];
+      var advBtns = actions.map(function (act) {
+        var meta = App.ORDER_ACTIONS[act] || [act, ''];
+        return '<button type="button" class="btn btn-primary btn-xs" data-so-advance="' +
+          App.escapeHtml(o.orderNo) + '" data-action="' + act + '">标记' + meta[0] + '</button>';
+      }).join(' ');
+
+      var cancelBtn = sellerCanCancel(o.status)
+        ? '<button type="button" class="btn btn-ghost-danger btn-xs" data-so-cancel="' + App.escapeHtml(o.orderNo) + '">取消订单</button>'
+        : '';
+      var statusHtml = o.statusText
+        ? '<span class="badge ' + ((App.ORDER_STATUS[o.status] || [])[1] || 'badge-offshelf') + '">' + App.escapeHtml(o.statusText) + '</span>'
+        : App.badgeHtml(App.ORDER_STATUS, o.status);
+
+      html += '<div class="card" style="padding:10px 14px;margin-bottom:10px;border:1px solid var(--border,#e5e7eb)">'
+        + '<div class="card-title-row" style="margin:0">'
+          + '<b>订单 ' + App.escapeHtml(o.orderNo || '') + '</b>'
+          + '<span>' + statusHtml + '</span>'
+        + '</div>'
+        + '<ul class="order-items-list">' + rows + '</ul>'
+        + '<p style="font-size:12.5px;color:var(--text-muted);margin:6px 0 8px">'
+          + '合计：￥' + App.formatPrice(o.totalAmount)
+          + '　共 ' + (o.itemCount || (o.items || []).length) + ' 种商品'
+          + (o.customerName ? ('　买家：' + App.escapeHtml(o.customerName)) : '')
+          + (o.customerPhone ? (' ' + App.escapeHtml(o.customerPhone)) : '')
+          + '　下单时间：' + App.formatTime(o.createdAt)
+          + (o.cancelReason ? ('　取消原因：' + App.escapeHtml(o.cancelReason)) : '')
+        + '</p>'
+        + '<div>' + advBtns + ' ' + cancelBtn + '</div>'
+        + '</div>';
+    });
+    els.soList.innerHTML = html;
+    App.renderPagination(els.soPager, soPage, SO_PAGE_SIZE, total, function (p) {
+      soPage = p;
+      loadSellerOrders();
+    });
+  }
+
+  els.soList.addEventListener('click', async function (e) {
+    var adv = e.target && e.target.closest ? e.target.closest('[data-so-advance]') : null;
+    var cancel = e.target && e.target.closest ? e.target.closest('[data-so-cancel]') : null;
+    var btn = adv || cancel;
+    if (!btn) return;
+
+    if (adv) {
+      var orderNo = adv.getAttribute('data-so-advance');
+      var action = adv.getAttribute('data-action');
+      App.setLoading(btn, true, '推进中');
+      try {
+        var o = await Api.advanceOrder(orderNo, action);
+        App.showToast('已推进到「' + (o.statusText || (App.ORDER_STATUS[o.status] || [o.status])[0]) + '」', 'success');
+        loadSellerOrders();
+      } catch (err) {
+        if (err.status === 401) { handleAuthExpired(); return; }
+        App.showToast(err.message || '推进失败', 'error');
+        loadSellerOrders(); /* 409：状态可能已被别人推进 */
+      } finally {
+        App.setLoading(btn, false);
+      }
+      return;
+    }
+
+    if (cancel) {
+      var no = cancel.getAttribute('data-so-cancel');
+      if (!confirm('确定取消该订单吗？取消后释放锁定库存。')) return;
+      App.setLoading(btn, true);
+      try {
+        await Api.cancelSellerOrder(no);
+        App.showToast('订单已取消', 'success');
+        loadSellerOrders();
+      } catch (err) {
+        if (err.status === 401) { handleAuthExpired(); return; }
+        App.showToast(err.message || '取消失败', 'error');
+        loadSellerOrders();
+      } finally {
+        App.setLoading(btn, false);
+      }
+    }
+  });
 
   /* ==================== 类别管理 ==================== */
 

@@ -26,6 +26,8 @@
       <div id="nav-user" hidden>
         <span class="welcome">你好，<b id="nav-username">买家</b></span>
         <a class="btn btn-ghost btn-sm" href="profile.html">个人中心</a>
+        <a class="btn btn-ghost btn-sm" href="cart.html">购物车</a>
+        <a class="btn btn-ghost btn-sm" href="favorite.html">收藏</a>
         <a class="btn btn-ghost btn-sm" href="orders.html">我的订单</a>
         <button type="button" class="btn btn-ghost-danger btn-sm" id="nav-logout">退出</button>
       </div>
@@ -78,26 +80,28 @@
 
           <div class="order-box" id="order-box">
             <div id="order-login-tip" class="banner banner-info" hidden>
-              请先<a href="login.html">登录</a>后再下单。
+              请先<a href="login.html">登录</a>后收藏、加购或下单。
             </div>
             <div id="order-disabled-tip" class="banner banner-warning" hidden></div>
 
-            <form id="order-form" novalidate>
-              <div class="form-row">
-                <div class="form-field">
-                  <label for="order-name">姓名</label>
-                  <input class="input" id="order-name" maxlength="50" placeholder="请输入您的姓名" autocomplete="name">
-                  <p class="field-error" id="order-name-error" hidden></p>
-                </div>
-                <div class="form-field">
-                  <label for="order-phone">联系电话</label>
-                  <input class="input" id="order-phone" maxlength="20" placeholder="请输入手机号" inputmode="tel" autocomplete="tel">
-                  <p class="field-error" id="order-phone-error" hidden></p>
+            <!-- 迭代 3：下单统一走购物车多选下单；详情页提供收藏 / 加购入口 -->
+            <div id="buy-form" novalidate>
+              <div class="form-row" style="align-items:flex-end">
+                <div class="form-field" style="max-width:150px">
+                  <label for="buy-qty">数量</label>
+                  <span class="qty-stepper">
+                    <button type="button" id="buy-qty-minus">−</button>
+                    <span class="qty-val" id="buy-qty">1</span>
+                    <button type="button" id="buy-qty-plus">＋</button>
+                  </span>
                 </div>
               </div>
-              <button type="submit" class="btn btn-primary btn-block" id="order-submit">提交下单</button>
-              <p class="order-note">下单后不可撤销；交易结果（成功 / 失败）可在「我的订单」中查看。</p>
-            </form>
+              <div class="form-row">
+                <button type="button" class="btn btn-primary" id="buy-add-cart" style="flex:1">加入购物车</button>
+                <button type="button" class="btn btn-ghost" id="buy-favorite" style="flex:1">♡ 收藏</button>
+              </div>
+              <p class="order-note">加入购物车后请前往<a href="cart.html">购物车</a>勾选商品提交下单；重复加入同一商品数量自动累加。</p>
+            </div>
           </div>
         </div>
       </div>
@@ -113,7 +117,7 @@
 </main>
 
 <footer class="site-footer">
-  第 7 组 · 在线购物系统 · 迭代 2（挑战需求 A）· 买家端
+  第 7 组 · 在线购物系统 · 迭代 4（挑战需求 B）· 买家端
 </footer>
 
 <script src="js/common.js"></script>

@@ -31,13 +31,15 @@
     orderBox: $('order-box'),
     loginTip: $('order-login-tip'),
     disabledTip: $('order-disabled-tip'),
-    orderForm: $('order-form'),
-    orderName: $('order-name'),
-    orderPhone: $('order-phone'),
-    nameError: $('order-name-error'),
-    phoneError: $('order-phone-error'),
-    orderSubmit: $('order-submit')
+    buyForm: $('buy-form'),
+    qtyVal: $('buy-qty'),
+    qtyMinus: $('buy-qty-minus'),
+    qtyPlus: $('buy-qty-plus'),
+    addCartBtn: $('buy-add-cart'),
+    favBtn: $('buy-favorite')
   };
+
+  var buyQty = 1;
 
   /* ==================== 详情加载 ==================== */
 
@@ -128,69 +130,98 @@
     });
   });
 
-  /* ==================== 下单区 ==================== */
+  /* ==================== 收藏 / 加购 / 数量（迭代 3） ==================== */
 
   function renderOrderArea(p) {
     var logged = Api.isCustomerLogin();
     var canBuy = p.status === 'ON_SALE' && Number(p.stock) > 0;
 
     App.show(els.loginTip, !logged);
-    App.show(els.orderForm, logged && canBuy);
+    App.show(els.buyForm, logged);
 
     if (logged && !canBuy) {
       els.disabledTip.textContent = (p.status !== 'ON_SALE')
-        ? '该商品已下架，暂不可下单。'
-        : '该商品库存为 0，暂不可下单，请等店主补货。';
+        ? '该商品已下架，暂不可加购下单。'
+        : '该商品库存为 0，暂不可下单，可先收藏，等店主补货。';
       App.show(els.disabledTip, true);
+      els.addCartBtn.disabled = true;
+      els.qtyMinus.disabled = true;
+      els.qtyPlus.disabled = true;
     } else {
       App.show(els.disabledTip, false);
+      els.addCartBtn.disabled = !logged;
+      els.qtyMinus.disabled = !logged;
+      els.qtyPlus.disabled = !logged;
     }
 
-    /* 已登录且有默认资料时，预填姓名电话由用户自己确认，此处不自动填充敏感信息 */
+    buyQty = 1;
+    els.qtyVal.textContent = '1';
+    if (logged) refreshFavoriteState();
   }
 
-  els.orderForm.addEventListener('submit', async function (e) {
-    e.preventDefault();
+  function requireLogin(back) {
+    App.showToast('请先登录', 'error');
+    setTimeout(function () {
+      location.href = 'login.html?redirect=' + encodeURIComponent(back || ('product.html?id=' + productId));
+    }, 800);
+  }
 
-    if (!Api.isCustomerLogin()) {
-      App.showToast('请先登录后再下单', 'error');
-      setTimeout(function () {
-        location.href = 'login.html?redirect=' + encodeURIComponent('product.html?id=' + productId);
-      }, 800);
-      return;
-    }
+  /* 数量步进：上限 = 库存（防误加超量，后端仍会最终校验） */
+  els.qtyPlus.addEventListener('click', function () {
+    var max = currentProduct ? Math.max(Number(currentProduct.stock) || 1, 1) : 99;
+    if (buyQty < max) { buyQty += 1; els.qtyVal.textContent = String(buyQty); }
+  });
+  els.qtyMinus.addEventListener('click', function () {
+    if (buyQty > 1) { buyQty -= 1; els.qtyVal.textContent = String(buyQty); }
+  });
 
-    var name = els.orderName.value.trim();
-    var phone = els.orderPhone.value.trim();
-    var valid = true;
-
-    if (!name) { App.fieldError(els.nameError, '请输入姓名'); valid = false; }
-    else App.fieldError(els.nameError, '');
-
-    if (!phone) { App.fieldError(els.phoneError, '请输入联系电话'); valid = false; }
-    else App.fieldError(els.phoneError, '');
-
-    if (!valid) return;
-
-    App.setLoading(els.orderSubmit, true, '提交中');
+  /* 加入购物车（重复加入数量累加） */
+  els.addCartBtn.addEventListener('click', async function () {
+    if (!Api.isCustomerLogin()) { requireLogin(); return; }
+    App.setLoading(els.addCartBtn, true, '加购中');
     try {
-      await Api.createOrder(currentProduct.id, { name: name, phone: phone });
-      App.showToast('下单成功，请等待店主确认', 'success');
-      els.orderForm.reset();
-      setTimeout(function () { location.href = 'orders.html'; }, 900);
+      await Api.addToCart(currentProduct.id, buyQty);
+      App.showToast('已加入购物车（数量 ' + buyQty + '）', 'success');
     } catch (err) {
-      if (Api.isAuthError(err)) {
-        Api.setCustomerSession(null);
-        App.showToast('登录已失效，请重新登录', 'error');
-        setTimeout(function () {
-          location.href = 'login.html?redirect=' + encodeURIComponent('product.html?id=' + productId);
-        }, 900);
-      } else {
-        App.showToast(err.message, 'error');
-        if (err.status === 400) loadDetail(); /* 商品状态可能已变化，刷新 */
-      }
+      if (Api.isAuthError(err)) { Api.setCustomerSession(null); requireLogin(); return; }
+      App.showToast(err.message || '加购失败', 'error');
     } finally {
-      App.setLoading(els.orderSubmit, false);
+      App.setLoading(els.addCartBtn, false);
+    }
+  });
+
+  /* 收藏 / 取消收藏（去重） */
+  async function refreshFavoriteState() {
+    try {
+      var data = await Api.isFavorite(productId);
+      updateFavBtn(!!(data && data.favorited));
+    } catch (e) { /* 静默：按钮维持默认态 */ }
+  }
+
+  function updateFavBtn(fav) {
+    els.favBtn.textContent = fav ? '♥ 已收藏' : '♡ 收藏';
+    els.favBtn.classList.toggle('btn-ghost-danger', !!fav);
+  }
+
+  els.favBtn.addEventListener('click', async function () {
+    if (!Api.isCustomerLogin()) { requireLogin(); return; }
+    var fav = els.favBtn.textContent.indexOf('已收藏') >= 0;
+    App.setLoading(els.favBtn, true);
+    try {
+      if (fav) {
+        await Api.removeFavorite(currentProduct.id);
+        updateFavBtn(false);
+        App.showToast('已取消收藏', 'success');
+      } else {
+        await Api.addFavorite(currentProduct.id);
+        updateFavBtn(true);
+        App.showToast('已加入收藏', 'success');
+      }
+    } catch (err) {
+      if (Api.isAuthError(err)) { Api.setCustomerSession(null); requireLogin(); return; }
+      App.showToast(err.message || '操作失败', 'error');
+    } finally {
+      App.setLoading(els.favBtn, false);
     }
   });
 
