@@ -4,7 +4,7 @@ import com.group7.shop.common.Result;
 import com.group7.shop.config.CustomerAuthInterceptor;
 import com.group7.shop.dto.CheckoutRequest;
 import com.group7.shop.dto.CheckoutResult;
-import com.group7.shop.dto.OrderView;
+import com.group7.shop.dto.PurchaseOrderView;
 import com.group7.shop.entity.Customer;
 import com.group7.shop.service.OrderService;
 import jakarta.validation.Valid;
@@ -34,14 +34,14 @@ public class OrderController {
     }
 
     @GetMapping
-    public Result<Page<OrderView>> list(@RequestAttribute(CustomerAuthInterceptor.ATTRIBUTE) Customer customer,
+    public Result<Page<PurchaseOrderView>> list(@RequestAttribute(CustomerAuthInterceptor.ATTRIBUTE) Customer customer,
                                         @RequestParam(defaultValue = "1") int page,
                                         @RequestParam(defaultValue = "12") int size) {
         return Result.success(orders.listCustomerOrders(customer.getId(), page, size));
     }
 
     @PostMapping("/{id}/cancel")
-    public Result<OrderView> cancel(@RequestAttribute(CustomerAuthInterceptor.ATTRIBUTE) Customer customer,
+    public Result<PurchaseOrderView> cancel(@RequestAttribute(CustomerAuthInterceptor.ATTRIBUTE) Customer customer,
                                     @PathVariable Long id) {
         return Result.success(orders.cancelByCustomer(customer.getId(), id));
     }

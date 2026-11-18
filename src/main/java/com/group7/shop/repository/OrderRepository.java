@@ -1,6 +1,7 @@
 package com.group7.shop.repository;
 
 import com.group7.shop.entity.Order;
+import com.group7.shop.entity.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -22,6 +23,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     /** 卖家后台订单列表：全部订单按时间倒序。 */
     List<Order> findAllByOrderByCreatedAtDescIdDesc();
+
+    /** 卖家后台按状态过滤 + 翻页（订单管理域 OrderGateway 适配层使用）。 */
+    Page<Order> findByStatus(OrderStatus status, Pageable pageable);
 
     Optional<Order> findByOrderNo(String orderNo);
 
