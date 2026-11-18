@@ -51,6 +51,10 @@ public class Order {
     @Column(length = 200)
     private String location;
 
+    /** 取消原因；未取消时为 null（订单管理域取消时写入，订单核心域负责落库）。 */
+    @Column(name = "cancel_reason", length = 200)
+    private String cancelReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -90,6 +94,9 @@ public class Order {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public Long getVersion() { return version; }
+
+    public String getCancelReason() { return cancelReason; }
+    public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
 
     public void setStatus(OrderStatus status) { this.status = status; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }

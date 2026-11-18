@@ -2,7 +2,7 @@ package com.group7.shop.service;
 
 import com.group7.shop.common.BusinessException;
 import com.group7.shop.dto.CheckoutResult;
-import com.group7.shop.dto.OrderView;
+import com.group7.shop.dto.PurchaseOrderView;
 import com.group7.shop.entity.CartItem;
 import com.group7.shop.entity.Customer;
 import com.group7.shop.entity.Order;
@@ -85,7 +85,12 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderView cancelByCustomer(Long customerId, Long orderId) {
+    public PurchaseOrderView cancelByCustomer(Long customerId, Long orderId) {
+        return cancelByCustomer(customerId, orderId, null);
+    }
+
+    @Transactional
+    public PurchaseOrderView cancelByCustomer(Long customerId, Long orderId, String reason) {
         Order order = orders.findByIdForUpdate(orderId).orElseThrow(() -> BusinessException.notFound("订单不存在"));
         if (!order.getCustomerId().equals(customerId)) {
             throw BusinessException.notFound("订单不存在");
@@ -93,30 +98,38 @@ public class OrderService {
         if (order.getStatus().ordinal() >= OrderStatus.SHIPPED.ordinal()) {
             throw BusinessException.badRequest("发货后不能取消订单");
         }
-        return cancel(order);
+        return cancel(order, reason);
     }
 
     @Transactional
-    public OrderView cancelBySeller(Long orderId) {
+    public PurchaseOrderView cancelBySeller(Long orderId) {
+        return cancelBySeller(orderId, null);
+    }
+
+    @Transactional
+    public PurchaseOrderView cancelBySeller(Long orderId, String reason) {
         Order order = orders.findByIdForUpdate(orderId).orElseThrow(() -> BusinessException.notFound("订单不存在"));
         if (order.getStatus().isTerminal()) {
             throw BusinessException.badRequest("订单已结束");
         }
-        return cancel(order);
+        return cancel(order, reason);
     }
 
-    private OrderView cancel(Order order) {
+    private PurchaseOrderView cancel(Order order, String reason) {
         for (OrderItem item : orderItems.findByOrderIdOrderByIdAsc(order.getId())) {
             Product product = products.findByIdForUpdate(item.getProductId()).orElseThrow();
             product.unlockStock(item.getQuantity());
         }
         order.setStatus(OrderStatus.CANCELLED);
         order.setUpdatedAt(Instant.now());
+        if (reason != null && !reason.isBlank()) {
+            order.setCancelReason(reason.trim());
+        }
         return view(order);
     }
 
     @Transactional
-    public OrderView advanceBySeller(Long orderId, OrderStatus next) {
+    public PurchaseOrderView advanceBySeller(Long orderId, OrderStatus next) {
         Order order = orders.findByIdForUpdate(orderId).orElseThrow(() -> BusinessException.notFound("订单不存在"));
         OrderStatus current = order.getStatus();
         if (current.isTerminal() || next == null || next == OrderStatus.CANCELLED ||
@@ -138,7 +151,7 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public Page<OrderView> listCustomerOrders(Long customerId, int page, int size) {
+    public Page<PurchaseOrderView> listCustomerOrders(Long customerId, int page, int size) {
         if (page < 1 || size < 1 || size > 100) {
             throw BusinessException.badRequest("页码或每页数量不合法");
         }
@@ -146,11 +159,11 @@ public class OrderService {
                 Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")))).map(this::view);
     }
 
-    private OrderView view(Order order) {
-        List<OrderView.Item> items = orderItems.findByOrderIdOrderByIdAsc(order.getId()).stream()
-                .map(item -> new OrderView.Item(item.getProductId(), item.getProductName(),
+    private PurchaseOrderView view(Order order) {
+        List<PurchaseOrderView.Item> items = orderItems.findByOrderIdOrderByIdAsc(order.getId()).stream()
+                .map(item -> new PurchaseOrderView.Item(item.getProductId(), item.getProductName(),
                         item.getUnitPrice(), item.getQuantity())).toList();
-        return new OrderView(order.getId(), order.getOrderNo(), order.getStatus(),
+        return new PurchaseOrderView(order.getId(), order.getOrderNo(), order.getStatus(),
                 order.getTotalAmount(), order.getCreatedAt(), items);
     }
 }
