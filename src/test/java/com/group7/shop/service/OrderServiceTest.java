@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.springframework.http.HttpStatus;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.Mockito.mock;
@@ -80,7 +81,8 @@ class OrderServiceTest {
         when(products.findByIdForUpdate(10L)).thenReturn(Optional.of(product));
 
         assertThatThrownBy(() -> service.advanceBySeller(1L, OrderStatus.SHIPPED))
-                .isInstanceOf(BusinessException.class);
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.getStatus()).isEqualTo(HttpStatus.CONFLICT));
         service.cancelByCustomer(1L, 1L);
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(product.getLockedStock()).isZero();
