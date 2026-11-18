@@ -54,6 +54,12 @@ public class FavoriteService {
                 .ifPresent(favoriteRepository::delete);
     }
 
+    /** 是否已收藏（商品详情页收藏按钮态）。 */
+    @Transactional(readOnly = true)
+    public boolean isFavorite(Long customerId, Long productId) {
+        return favoriteRepository.existsByCustomerIdAndProductId(customerId, productId);
+    }
+
     /** 收藏列表（倒序：最近收藏在前），标注口径与购物车一致。 */
     @Transactional(readOnly = true)
     public FavoriteListView list(Long customerId) {
