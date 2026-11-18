@@ -7,7 +7,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * 注册客户端鉴权拦截器（李宇轩负责）。
  *
- * <p>迭代 3（挑战需求 B）把「登录 + 账号隔离」作为硬性要求：收藏、购物车、订单都带客户私有数据，
+ * <p>迭代 4（挑战需求 B）把「登录 + 账号隔离」作为硬性要求：收藏、购物车、订单都带客户私有数据，
  * 因此拦截范围从最初的 {@code /api/customer/**} 扩展为：
  * <ul>
  *   <li>{@code /api/customer/**} —— 账号与个人中心（放行注册与登录）；</li>

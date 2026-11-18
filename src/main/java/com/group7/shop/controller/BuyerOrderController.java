@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
  *       前端当前走这一条；</li>
  *   <li>本类的 {@code /api/orders}——买家订单视图，字段与卖家端同构（含 statusText / allowedActions）。</li>
  * </ul>
- * 后两者语义重复，最终口径待组内对齐；本类保留是因为迭代 3 任务明确要求买家订单接口由本域提供，
+ * 后两者语义重复，最终口径待组内对齐；本类保留是因为迭代 4 任务明确要求买家订单接口由本域提供，
  * 且它复用同一套 {@code OrderGateway} 契约与出参整形，删或留都不影响卖家端。
  */
 @RestController

@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 订单域缺席时的降级行为（李宇轩负责）。
  *
- * <p>本类**不加载**任何 {@link OrderGateway} 实现，模拟迭代 3 开发期订单核心域尚未合并的状态：
+ * <p>本类**不加载**任何 {@link OrderGateway} 实现，模拟迭代 4 开发期订单核心域尚未合并的状态：
  * 应用必须能正常启动（前端、部署、其他域的联调不受影响），只有访问订单接口时返回 503 并说明原因，
  * 而不是启动失败或抛出 500 堆栈。订单域合并后本类即可删除。
  */
