@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>守的是联调时最容易出岔子的两件事：状态码两套命名必须都能认、
  * 订单域少回字段时出参不能出现空白（小计/种数/文案都要有兜底）。
  */
-@DisplayName("订单视图整形与状态码兼容")
 class OrderViewNormalizerTest {
 
     private static OrderItemView item(String unitPrice, int quantity, BigDecimal subtotal, Boolean available) {
