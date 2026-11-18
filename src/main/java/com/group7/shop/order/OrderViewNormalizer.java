@@ -2,9 +2,9 @@ package com.group7.shop.order;
 
 import com.group7.shop.common.BusinessException;
 import com.group7.shop.dto.OrderItemView;
-import com.group7.shop.dto.OrderView;
 import com.group7.shop.dto.PageResult;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -60,7 +60,7 @@ public final class OrderViewNormalizer {
 
     /* ==================== 出参整形 ==================== */
 
-    public static OrderView normalize(OrderView view) {
+    public static SellerOrderView normalize(SellerOrderView view) {
         if (view == null) {
             return null;
         }
@@ -69,9 +69,11 @@ public final class OrderViewNormalizer {
             statusText = OrderStatusCodes.labelOf(view.status());
         }
         List<String> actions = view.allowedActions() == null ? List.of() : List.copyOf(view.allowedActions());
-        List<OrderItemView> items = view.items() == null ? List.of() : List.copyOf(view.items());
+        List<OrderItemView> items = view.items() == null
+                ? List.of()
+                : view.items().stream().map(OrderViewNormalizer::normalizeItem).toList();
         int itemCount = view.itemCount() > 0 ? view.itemCount() : items.size();
-        return new OrderView(
+        return new SellerOrderView(
                 view.orderNo(),
                 view.customerId(),
                 view.customerName(),
@@ -88,13 +90,29 @@ public final class OrderViewNormalizer {
         );
     }
 
-    public static PageResult<OrderView> normalize(PageResult<OrderView> page) {
+    public static PageResult<SellerOrderView> normalize(PageResult<SellerOrderView> page) {
         if (page == null) {
             return new PageResult<>(1, 0, 0, List.of());
         }
-        List<OrderView> items = page.items() == null
+        List<SellerOrderView> items = page.items() == null
                 ? List.of()
                 : page.items().stream().map(OrderViewNormalizer::normalize).toList();
         return new PageResult<>(page.page(), page.size(), page.total(), items);
+    }
+
+    /**
+     * 明细兜底：订单域若未回小计，用「单价 × 数量」补齐，避免前端金额一列为空。
+     * {@code available} 保持原值（{@code null} 表示订单域未表态，前端不标注无货）。
+     */
+    private static OrderItemView normalizeItem(OrderItemView item) {
+        if (item == null) {
+            return null;
+        }
+        BigDecimal subtotal = item.subtotal();
+        if (subtotal == null && item.unitPrice() != null) {
+            subtotal = item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()));
+        }
+        return new OrderItemView(item.productId(), item.productName(), item.coverImage(),
+                item.unitPrice(), item.quantity(), subtotal, item.available());
     }
 }

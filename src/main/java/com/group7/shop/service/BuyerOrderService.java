@@ -3,7 +3,7 @@ package com.group7.shop.service;
 import com.group7.shop.common.AccountGuard;
 import com.group7.shop.common.BusinessException;
 import com.group7.shop.dto.OrderCancelRequest;
-import com.group7.shop.dto.OrderView;
+import com.group7.shop.order.SellerOrderView;
 import com.group7.shop.dto.PageResult;
 import com.group7.shop.entity.Customer;
 import com.group7.shop.order.OrderGatewayAccessor;
@@ -41,7 +41,7 @@ public class BuyerOrderService {
     }
 
     /** 我的订单，按下单时间倒序（翻页由订单域完成）。 */
-    public PageResult<OrderView> list(Customer customer, Integer page, Integer size) {
+    public PageResult<SellerOrderView> list(Customer customer, Integer page, Integer size) {
         int safePage = OrderViewNormalizer.requirePage(page);
         int safeSize = OrderViewNormalizer.requireSize(size);
         return OrderViewNormalizer.normalize(
@@ -49,11 +49,11 @@ public class BuyerOrderService {
     }
 
     /** 买家取消本人订单：仅「开始发货」之前可取消，之后由订单域返回 409。 */
-    public OrderView cancel(Customer customer, String orderNo, OrderCancelRequest request) {
+    public SellerOrderView cancel(Customer customer, String orderNo, OrderCancelRequest request) {
         String safeOrderNo = OrderViewNormalizer.requireOrderNo(orderNo);
         String rawReason = request == null ? null : request.reason();
         String reason = (rawReason == null || rawReason.isBlank()) ? DEFAULT_CANCEL_REASON : rawReason.trim();
-        OrderView view = gatewayAccessor.require().cancelByBuyer(customer.getId(), safeOrderNo, reason);
+        SellerOrderView view = gatewayAccessor.require().cancelByBuyer(customer.getId(), safeOrderNo, reason);
         if (view == null) {
             throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "订单域未返回取消结果");
         }

@@ -26,6 +26,17 @@ public final class OrderStatusCodes {
 
     private static final Map<String, String> LABELS = new LinkedHashMap<>();
 
+    /**
+     * 订单核心域 {@code OrderStatus} 枚举名 → 本域状态码。
+     *
+     * <p>两套命名是历史原因：本域按业务口语命名（PENDING / PACKED），
+     * 订单域的枚举按主谓命名（CUSTOMER_SUBMITTED / READY_TO_SHIP）。
+     * 前端徽章配色按订单域取值写，`?status=` 过滤参数可能来自任一来源，
+     * 因此在入口处统一归一，避免"状态名拼对了却返回空列表"。
+     * 长期仍应统一为一套（以订单域枚举为准），此处只是兼容层。
+     */
+    private static final Map<String, String> ALIASES = new LinkedHashMap<>();
+
     static {
         LABELS.put(PENDING, "客户下单");
         LABELS.put(CONFIRMED, "商家确认");
@@ -33,6 +44,11 @@ public final class OrderStatusCodes {
         LABELS.put(SHIPPED, "开始发货");
         LABELS.put(COMPLETED, "交易完成");
         LABELS.put(CANCELLED, "已取消");
+
+        ALIASES.put("CUSTOMER_SUBMITTED", PENDING);
+        ALIASES.put("SELLER_CONFIRMED", CONFIRMED);
+        ALIASES.put("READY_TO_SHIP", PACKED);
+        /* SHIPPED / COMPLETED / CANCELLED 与订单域同名，无需别名 */
     }
 
     private OrderStatusCodes() {
@@ -43,13 +59,16 @@ public final class OrderStatusCodes {
         return List.copyOf(LABELS.keySet());
     }
 
-    /** 归一化为大写状态码，无法识别返回 {@code null}。 */
+    /** 归一化为本域大写状态码（兼容订单域枚举名），无法识别返回 {@code null}。 */
     public static String normalize(String code) {
         if (code == null) {
             return null;
         }
         String upper = code.trim().toUpperCase();
-        return LABELS.containsKey(upper) ? upper : null;
+        if (LABELS.containsKey(upper)) {
+            return upper;
+        }
+        return ALIASES.get(upper);
     }
 
     /** 中文文案；无法识别的状态原样返回，避免前端出现空白标签。 */

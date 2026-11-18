@@ -3,7 +3,6 @@ package com.group7.shop.order;
 import com.group7.shop.common.BusinessException;
 import com.group7.shop.common.Result;
 import com.group7.shop.dto.OrderItemView;
-import com.group7.shop.dto.OrderView;
 import com.group7.shop.dto.PageResult;
 import com.group7.shop.repository.CustomerRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -407,7 +406,7 @@ class OrderAdminIntegrationTest {
         }
 
         @Override
-        public PageResult<OrderView> sellerOrders(String status, int page, int size) {
+        public PageResult<SellerOrderView> sellerOrders(String status, int page, int size) {
             return page(orders.values().stream()
                     .filter(o -> status == null || status.equals(o.status))
                     .sorted(Comparator.comparing((FakeOrder o) -> o.createdAt).reversed())
@@ -415,7 +414,7 @@ class OrderAdminIntegrationTest {
         }
 
         @Override
-        public PageResult<OrderView> buyerOrders(Long customerId, int page, int size) {
+        public PageResult<SellerOrderView> buyerOrders(Long customerId, int page, int size) {
             return page(orders.values().stream()
                     .filter(o -> customerId != null && customerId.equals(o.customerId))
                     .sorted(Comparator.comparing((FakeOrder o) -> o.createdAt).reversed())
@@ -423,7 +422,7 @@ class OrderAdminIntegrationTest {
         }
 
         @Override
-        public OrderView advance(String orderNo, OrderAction action) {
+        public SellerOrderView advance(String orderNo, OrderAction action) {
             FakeOrder order = require(orderNo);
             String expected = switch (action) {
                 case CONFIRM -> "PENDING";
@@ -446,7 +445,7 @@ class OrderAdminIntegrationTest {
         }
 
         @Override
-        public OrderView cancelBySeller(String orderNo, String reason) {
+        public SellerOrderView cancelBySeller(String orderNo, String reason) {
             FakeOrder order = require(orderNo);
             if ("COMPLETED".equals(order.status) || "CANCELLED".equals(order.status)) {
                 throw new BusinessException(HttpStatus.CONFLICT, "订单已结束，不能取消");
@@ -461,7 +460,7 @@ class OrderAdminIntegrationTest {
         String lastBuyerCancelReason;
 
         @Override
-        public OrderView cancelByBuyer(Long customerId, String orderNo, String reason) {
+        public SellerOrderView cancelByBuyer(Long customerId, String orderNo, String reason) {
             lastBuyerCancelReason = reason;
             FakeOrder order = orders.get(orderNo);
             if (order == null || !order.customerId.equals(customerId)) {
@@ -477,7 +476,7 @@ class OrderAdminIntegrationTest {
         }
 
         /** 故障注入：返回一条不属于该客户的订单，验证本层二次核对。 */
-        private OrderView foreignViewFor(Long customerId) {
+        private SellerOrderView foreignViewFor(Long customerId) {
             return orders.values().stream()
                     .filter(o -> !o.customerId.equals(customerId))
                     .findFirst()
@@ -493,8 +492,8 @@ class OrderAdminIntegrationTest {
             return order;
         }
 
-        private PageResult<OrderView> page(List<FakeOrder> all, int page, int size) {
-            List<OrderView> items = new ArrayList<>();
+        private PageResult<SellerOrderView> page(List<FakeOrder> all, int page, int size) {
+            List<SellerOrderView> items = new ArrayList<>();
             int from = Math.min((page - 1) * size, all.size());
             int to = Math.min(from + size, all.size());
             for (int i = from; i < to; i++) {
@@ -515,8 +514,8 @@ class OrderAdminIntegrationTest {
             Instant updatedAt;
             String cancelReason;
 
-            OrderView toView() {
-                return new OrderView(
+            SellerOrderView toView() {
+                return new SellerOrderView(
                         orderNo,
                         customerId,
                         customerName,

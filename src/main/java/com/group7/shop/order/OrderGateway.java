@@ -1,6 +1,5 @@
 package com.group7.shop.order;
 
-import com.group7.shop.dto.OrderView;
 import com.group7.shop.dto.PageResult;
 
 /**
@@ -32,25 +31,25 @@ public interface OrderGateway {
      * @param page   页码，从 1 开始
      * @param size   每页条数
      */
-    PageResult<OrderView> sellerOrders(String status, int page, int size);
+    PageResult<SellerOrderView> sellerOrders(String status, int page, int size);
 
     /**
      * 买家视角：分页查询**本人**订单，按下单时间倒序。
      * 实现方必须按 {@code customerId} 过滤，不得返回他人订单。
      */
-    PageResult<OrderView> buyerOrders(Long customerId, int page, int size);
+    PageResult<SellerOrderView> buyerOrders(Long customerId, int page, int size);
 
     /**
      * 卖家推进订单状态（确认 / 备货 / 发货 / 完成）。
      * 状态机非法时抛 409；订单不存在抛 404。
      */
-    OrderView advance(String orderNo, OrderAction action);
+    SellerOrderView advance(String orderNo, OrderAction action);
 
     /**
      * 卖家取消订单（交易完成前），实现方负责释放已锁定库存。
      * 已完成的订单取消应返回 409。
      */
-    OrderView cancelBySeller(String orderNo, String reason);
+    SellerOrderView cancelBySeller(String orderNo, String reason);
 
     /**
      * 买家取消本人订单（开始发货前），实现方负责释放已锁定库存。
@@ -58,5 +57,5 @@ public interface OrderGateway {
      *
      * @param reason 取消原因，已由本域归一（省略时传「买家取消」），实现方负责落库
      */
-    OrderView cancelByBuyer(Long customerId, String orderNo, String reason);
+    SellerOrderView cancelByBuyer(Long customerId, String orderNo, String reason);
 }

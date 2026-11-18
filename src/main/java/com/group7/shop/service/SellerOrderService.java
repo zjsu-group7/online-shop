@@ -3,7 +3,7 @@ package com.group7.shop.service;
 import com.group7.shop.common.BusinessException;
 import com.group7.shop.dto.OrderActionRequest;
 import com.group7.shop.dto.OrderCancelRequest;
-import com.group7.shop.dto.OrderView;
+import com.group7.shop.order.SellerOrderView;
 import com.group7.shop.dto.PageResult;
 import com.group7.shop.order.OrderAction;
 import com.group7.shop.order.OrderGatewayAccessor;
@@ -44,7 +44,7 @@ public class SellerOrderService {
      * @param status 状态过滤，空表示全部；非法取值直接 400，
      *               避免「状态名拼错 → 返回空列表 → 以为订单丢了」
      */
-    public PageResult<OrderView> list(String status, Integer page, Integer size) {
+    public PageResult<SellerOrderView> list(String status, Integer page, Integer size) {
         int safePage = OrderViewNormalizer.requirePage(page);
         int safeSize = OrderViewNormalizer.requireSize(size);
 
@@ -62,14 +62,14 @@ public class SellerOrderService {
      * 推进订单状态：确认 → 备货完成 → 开始发货 → 交易完成，单向不可回退、不可跳级。
      * 跳级或回退由订单域判定并返回 409，本层不复制该规则。
      */
-    public OrderView advance(String orderNo, OrderActionRequest request) {
+    public SellerOrderView advance(String orderNo, OrderActionRequest request) {
         String safeOrderNo = OrderViewNormalizer.requireOrderNo(orderNo);
         OrderAction action = OrderAction.parse(request.action());
         if (action == null) {
             throw BusinessException.badRequest(
                     "动作取值不合法，可选：CONFIRM / PACK / SHIP / COMPLETE（取消请调用 /cancel）");
         }
-        OrderView view = gatewayAccessor.require().advance(safeOrderNo, action);
+        SellerOrderView view = gatewayAccessor.require().advance(safeOrderNo, action);
         log.info("卖家推进订单 {}：{} → {}", safeOrderNo, action.getLabel(), view == null ? "?" : view.status());
         return OrderViewNormalizer.normalize(view);
     }
@@ -78,11 +78,11 @@ public class SellerOrderService {
      * 卖家取消订单（交易完成前）。已完成的订单由订单域返回 409；
      * 库存释放由订单域在同一事务内完成，本层不重复扣还。
      */
-    public OrderView cancel(String orderNo, OrderCancelRequest request) {
+    public SellerOrderView cancel(String orderNo, OrderCancelRequest request) {
         String safeOrderNo = OrderViewNormalizer.requireOrderNo(orderNo);
         String reason = request == null ? null : request.reason();
         String finalReason = (reason == null || reason.isBlank()) ? DEFAULT_CANCEL_REASON : reason.trim();
-        OrderView view = gatewayAccessor.require().cancelBySeller(safeOrderNo, finalReason);
+        SellerOrderView view = gatewayAccessor.require().cancelBySeller(safeOrderNo, finalReason);
         log.info("卖家取消订单 {}，原因：{}", safeOrderNo, finalReason);
         return OrderViewNormalizer.normalize(view);
     }
