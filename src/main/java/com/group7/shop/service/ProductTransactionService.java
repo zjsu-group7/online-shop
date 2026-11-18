@@ -83,7 +83,7 @@ public class ProductTransactionService {
 
         IntentStatus intentStatus;
         if (result == TradeResult.SUCCESS) {
-            if (product.getStock() <= 0) {
+            if (product.stockOrZero() <= 0) {
                 throw BusinessException.conflict("库存不足，无法完成交易，请先补货");
             }
             selected.markTraded();

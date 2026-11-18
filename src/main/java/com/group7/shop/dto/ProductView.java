@@ -39,7 +39,8 @@ public record ProductView(
                 product.getImage(),
                 images == null ? List.of() : images,
                 product.getCategoryId(),
-                product.getStock(),
+                // 存量商品 stock 为 NULL 时统一展示为 0（迭代 3 回归修复）
+                product.stockOrZero(),
                 product.getStatus(),
                 product.getFrozenBy(),
                 product.getCreatedAt(),

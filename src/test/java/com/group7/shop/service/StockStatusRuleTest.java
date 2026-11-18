@@ -12,6 +12,7 @@ import com.group7.shop.entity.FailedAction;
 import com.group7.shop.entity.Intent;
 import com.group7.shop.entity.IntentStatus;
 import com.group7.shop.entity.Product;
+import com.group7.shop.entity.ProductCloseReason;
 import com.group7.shop.entity.ProductStatus;
 import com.group7.shop.repository.CategoryRepository;
 import com.group7.shop.repository.IntentRepository;
@@ -309,5 +310,137 @@ class StockStatusRuleTest {
                 .andExpect(jsonPath("$.data.intentStatus").value("TRADED"))
                 .andExpect(jsonPath("$.data.product.status").value("OFF_SHELF"))
                 .andExpect(jsonPath("$.data.product.stock").value(0));
+    }
+
+    /* ---------- 迭代 3 补测：成交与库存边界 ---------- */
+
+    private Long waitingId(Long productId, String name) {
+        return intentRepository.findByProductIdAndStatusOrderBySubmittedAtAscIdAsc(
+                        productId, IntentStatus.WAITING).stream()
+                .filter(i -> i.getName().equals(name))
+                .findFirst().orElseThrow().getId();
+    }
+
+    @Test
+    @DisplayName("TC-S15 成交后库存仍有剩余（3→2）：商品仍然下架且下架原因为 SOLD")
+    void successKeepsOffShelfWithRemainingStock() {
+        Long id = publishWithStock(3);
+        Long winner = submitIntent(id, "张三");
+        transactionService.selectBuyer(id, winner);
+
+        TransactionView result = transactionService.markResult(id, TradeResult.SUCCESS, null);
+
+        assertEquals(2, result.product().stock(), "库存应只扣 1 件");
+        assertEquals(ProductStatus.OFF_SHELF, result.product().status(), "有剩余库存也必须下架");
+        assertEquals(ProductCloseReason.SOLD, result.product().closeReason());
+        assertEquals(ProductCloseReason.SOLD, product(id).getCloseReason());
+    }
+
+    @Test
+    @DisplayName("TC-S16 成交后库存恰好归零（1→0）：下架原因仍为 SOLD，不能记成缺货")
+    void successToZeroStockIsSoldNotOutOfStock() {
+        Long id = publishWithStock(1);
+        Long winner = submitIntent(id, "张三");
+        transactionService.selectBuyer(id, winner);
+
+        TransactionView result = transactionService.markResult(id, TradeResult.SUCCESS, null);
+
+        assertEquals(0, result.product().stock());
+        assertEquals(ProductStatus.OFF_SHELF, result.product().status());
+        assertEquals(ProductCloseReason.SOLD, result.product().closeReason(),
+                "成交导致的 0 库存应记为 SOLD，而非 OUT_OF_STOCK");
+    }
+
+    @Test
+    @DisplayName("TC-S17 库存 0 自动下架后补货：仍保持下架，不会自动回到在售")
+    void restockAfterAutoCloseKeepsOffShelf() {
+        Long id = publishWithStock(1);
+        productService.updateStock(id, 0);
+        assertEquals(ProductStatus.OFF_SHELF, product(id).getStatus());
+        assertEquals(ProductCloseReason.OUT_OF_STOCK, product(id).getCloseReason());
+
+        var view = productService.updateStock(id, 5);
+
+        assertEquals(ProductStatus.OFF_SHELF, view.status(), "补货不等于上架，需显式重新上架");
+        assertEquals(5, view.stock());
+
+        assertEquals(ProductStatus.ON_SALE, productService.reshelf(id).status());
+    }
+
+    @Test
+    @DisplayName("TC-S18 连续两次 REQUEUE：第二次仍能回到队尾，位次依次前移")
+    void requeueTwiceStillGoesToTail() {
+        Long id = publishWithStock(2);
+        Long zhang = submitIntent(id, "张三");
+        Long li = submitIntent(id, "李四");
+        Long wang = submitIntent(id, "王五");
+
+        transactionService.selectBuyer(id, zhang);
+        transactionService.markResult(id, TradeResult.FAIL, FailedAction.REQUEUE);
+
+        // 第二次：队首李四被选中后再次重新排队
+        transactionService.selectBuyer(id, li);
+        TransactionView second = transactionService.markResult(
+                id, TradeResult.FAIL, FailedAction.REQUEUE);
+
+        assertEquals(IntentStatus.WAITING, second.intentStatus());
+        assertEquals(ProductStatus.ON_SALE, second.product().status());
+        assertEquals(2, second.product().stock(), "失败两次都不应扣库存");
+
+        List<BuyerIntentView> queue = intentService.activeQueue(id);
+        assertEquals(3, queue.size());
+        assertEquals("王五", queue.get(0).name());
+        assertEquals("张三", queue.get(1).name());
+        assertEquals("李四", queue.get(2).name(), "第二次重新排队同样应落到队尾");
+        assertEquals(3, queue.get(2).position());
+        assertEquals(waitingId(id, "李四"), li);
+        assertEquals(waitingId(id, "王五"), wang);
+    }
+
+    @Test
+    @DisplayName("TC-S19 已下架商品改库存不改状态；重新上架后队列为空（历史意向不恢复）")
+    void stockChangeOnOffShelfKeepsStatusAndQueueStaysEmpty() {
+        Long id = publishWithStock(2);
+        submitIntent(id, "张三");
+        submitIntent(id, "李四");
+
+        productService.offshelf(id);
+        assertEquals(ProductStatus.OFF_SHELF, product(id).getStatus());
+        assertEquals(0, intentService.activeQueue(id).size(), "下架后排队意向应全部作废");
+
+        var view = productService.updateStock(id, 4);
+        assertEquals(ProductStatus.OFF_SHELF, view.status(), "改库存不应改变已下架状态");
+        assertEquals(4, view.stock());
+
+        productService.reshelf(id);
+        assertEquals(ProductStatus.ON_SALE, product(id).getStatus());
+        assertEquals(0, intentService.activeQueue(id).size(), "重新上架不恢复历史意向");
+    }
+
+    @Test
+    @DisplayName("TC-S20 存量商品库存为 NULL：按 0 处理，成交被 409 拒绝且不抛 NPE")
+    void legacyNullStockTreatedAsZero() {
+        Long id = publishWithStock(1);
+        Long winner = submitIntent(id, "张三");
+
+        // 模拟迭代 1 存量数据：stock 列为 NULL
+        Product legacy = product(id);
+        legacy.setStock(null);
+        productRepository.saveAndFlush(legacy);
+
+        transactionService.selectBuyer(id, winner);
+        assertBizError(() -> transactionService.markResult(id, TradeResult.SUCCESS, null),
+                409, "库存不足，无法完成交易，请先补货");
+
+        // 结束本次交易后补货，再正常成交一次，确认不再出现空指针
+        transactionService.markResult(id, TradeResult.FAIL, FailedAction.VOID);
+        productService.updateStock(id, 2);
+
+        Long second = submitIntent(id, "李四");
+        transactionService.selectBuyer(id, second);
+        TransactionView result = transactionService.markResult(id, TradeResult.SUCCESS, null);
+
+        assertEquals(1, result.product().stock());
+        assertEquals(ProductStatus.OFF_SHELF, result.product().status());
     }
 }
