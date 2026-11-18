@@ -96,7 +96,7 @@ public class OrderService {
             throw BusinessException.notFound("订单不存在");
         }
         if (order.getStatus().ordinal() >= OrderStatus.SHIPPED.ordinal()) {
-            throw BusinessException.badRequest("发货后不能取消订单");
+            throw BusinessException.conflict("发货后不能取消订单");
         }
         return cancel(order, reason);
     }
@@ -110,7 +110,7 @@ public class OrderService {
     public PurchaseOrderView cancelBySeller(Long orderId, String reason) {
         Order order = orders.findByIdForUpdate(orderId).orElseThrow(() -> BusinessException.notFound("订单不存在"));
         if (order.getStatus().isTerminal()) {
-            throw BusinessException.badRequest("订单已结束");
+            throw BusinessException.conflict("订单已结束");
         }
         return cancel(order, reason);
     }
@@ -134,7 +134,7 @@ public class OrderService {
         OrderStatus current = order.getStatus();
         if (current.isTerminal() || next == null || next == OrderStatus.CANCELLED ||
                 next.ordinal() != current.ordinal() + 1) {
-            throw BusinessException.badRequest("订单状态不可回退或跳级");
+            throw BusinessException.conflict("订单状态不可回退或跳级");
         }
         if (next == OrderStatus.COMPLETED) {
             for (OrderItem item : orderItems.findByOrderIdOrderByIdAsc(orderId)) {
