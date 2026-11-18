@@ -180,6 +180,20 @@
     return { page: page, size: size, total: total, items: items };
   }
 
+  /* 后端购物车/收藏条目把商品信息嵌在 product 字段（嵌套 ProductView），
+     前端统一拍平为 productId/name/price/coverImage/status/stock 等扁平字段，供页面直接取用 */
+  function flattenProductFields(item) {
+    if (!item || !item.product) return item;
+    var p = item.product;
+    if (item.productId == null) item.productId = p.id;
+    if (item.name == null) item.name = p.name;
+    if (item.price == null) item.price = p.price;
+    if (item.coverImage == null) item.coverImage = p.imageUrl || (p.images && p.images[0]);
+    if (item.status == null) item.status = p.status;
+    if (item.stock == null) item.stock = p.stock;
+    return item;
+  }
+
   /* ============================================================
      接口清单
      ============================================================ */
@@ -367,7 +381,10 @@
        CartItem: { itemId, productId, quantity, name, price, coverImage, available, unavailableReason } */
     getCart: function () {
       if (MOCK) return Promise.resolve({ items: MOCK_CART.map(function (c) { return Object.assign({}, c); }), kinds: MOCK_CART.length, totalQuantity: MOCK_CART.reduce(function (s, c) { return s + c.quantity; }, 0) });
-      return request(BUYER + '/cart', { auth: 'customer' });
+      return request(BUYER + '/cart', { auth: 'customer' }).then(function (data) {
+        if (data && data.items) data.items = data.items.map(flattenProductFields);
+        return data;
+      });
     },
 
     /* 加购：{ productId, quantity? } 同商品重复加入数量累加，缺省 1 */
@@ -430,7 +447,10 @@
     /* 我的收藏（最近收藏在前）→ { items: [FavoriteItem] } */
     getFavorites: function () {
       if (MOCK) return Promise.resolve({ items: MOCK_FAV.map(function (f) { return Object.assign({}, f); }) });
-      return request(BUYER + '/favorites', { auth: 'customer' });
+      return request(BUYER + '/favorites', { auth: 'customer' }).then(function (data) {
+        if (data && data.items) data.items = data.items.map(flattenProductFields);
+        return data;
+      });
     },
 
     /* 收藏（幂等，重复收藏返回原条目） */
@@ -501,26 +521,26 @@
       });
     },
 
-    /* 本人订单列表（创建时间 + ID 倒序，翻页）→ PageResult<OrderView> */
+    /* 本人订单列表（创建时间 + ID 倒序，翻页）→ PageResult<OrderView>（李宇轩订单管理域，富视图） */
     listMyOrders: function (page, size) {
       if (MOCK) {
         var pg = Number(page) || 1, sz = Number(size) || 12;
         return Promise.resolve({ page: pg, size: sz, total: MOCK_ORDERS.length,
           items: MOCK_ORDERS.slice((pg - 1) * sz, pg * sz).map(function (o) { return Object.assign({}, o); }) });
       }
-      return request(BUYER + '/purchase-orders', { auth: 'customer', params: { page: page || 1, size: size || 12 } });
+      return request('/api/orders', { auth: 'customer', params: { page: page || 1, size: size || 12 } });
     },
 
-    /* 买家取消订单（传数字订单 id，开始发货后由后端拒绝） */
-    cancelMyOrder: function (orderId) {
+    /* 买家取消订单（传订单号 orderNo，开始发货后由后端拒绝） */
+    cancelMyOrder: function (orderNo) {
       if (MOCK) {
-        var o = MOCK_ORDERS.find(function (x) { return x.id === Number(orderId); });
+        var o = MOCK_ORDERS.find(function (x) { return x.orderNo === String(orderNo); });
         if (!o) throw ApiError(404, '订单不存在');
         if (o.status === 'SHIPPED' || o.status === 'COMPLETED' || o.status === 'CANCELLED') throw ApiError(409, '订单已开始发货，无法取消');
         o.status = 'CANCELLED'; o.statusText = '已取消'; o.allowedActions = [];
         return Promise.resolve(Object.assign({}, o));
       }
-      return request(BUYER + '/purchase-orders/' + encodeURIComponent(orderId) + '/cancel', {
+      return request('/api/orders/' + encodeURIComponent(orderNo) + '/cancel', {
         method: 'POST', auth: 'customer'
       });
     },

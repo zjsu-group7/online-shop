@@ -1,9 +1,9 @@
 /* ============================================================
    买家端 · 我的订单：五态状态机展示 + 倒序翻页 + 取消入口
-   对应接口：GET /api/customer/orders、POST /api/customer/orders/{id}/cancel
-   状态：CREATED→CONFIRMED→PREPARED→SHIPPED→COMPLETED（另含 CANCELLED 终态）
-   买家取消窗口：SHIPPED 前（即 CREATED / CONFIRMED / PREPARED）
-   单品小铺 · 迭代 3（挑战需求 B）· 邱圣洁
+   对应接口：GET /api/orders、POST /api/orders/{orderNo}/cancel
+   状态（对外状态码）：PENDING→CONFIRMED→PACKED→SHIPPED→COMPLETED（另含 CANCELLED 终态）
+   买家取消窗口：SHIPPED 前（即 PENDING / CONFIRMED / PACKED）
+   单品小铺 · 迭代 4（挑战需求 B）· 邱圣洁
    ============================================================ */
 (function () {
   'use strict';
@@ -52,9 +52,9 @@
     }
   }
 
-  /* 买家可取消窗口：开始发货前（CUSTOMER_SUBMITTED / SELLER_CONFIRMED / READY_TO_SHIP） */
+  /* 买家可取消窗口：开始发货前（PENDING / CONFIRMED / PACKED） */
   function canCancel(status) {
-    return status === 'CUSTOMER_SUBMITTED' || status === 'SELLER_CONFIRMED' || status === 'READY_TO_SHIP';
+    return status === 'PENDING' || status === 'CONFIRMED' || status === 'PACKED';
   }
 
   function renderList(items) {
@@ -67,7 +67,7 @@
       }).join('');
 
       var cancelBtn = canCancel(o.status)
-        ? '<button type="button" class="btn btn-ghost-danger btn-xs" data-cancel="' + o.id + '">取消订单</button>'
+        ? '<button type="button" class="btn btn-ghost-danger btn-xs" data-cancel="' + App.escapeHtml(o.orderNo) + '">取消订单</button>'
         : '';
       var statusHtml = o.statusText
         ? '<span class="badge ' + ((App.ORDER_STATUS[o.status] || [])[1] || 'badge-offshelf') + '">' + App.escapeHtml(o.statusText) + '</span>'
@@ -95,15 +95,15 @@
     });
   }
 
-  /* 取消订单（事件委托，传数字订单 id） */
+  /* 取消订单（事件委托，传订单号 orderNo） */
   els.list.addEventListener('click', async function (e) {
     var btn = e.target && e.target.closest ? e.target.closest('[data-cancel]') : null;
     if (!btn) return;
-    var orderId = btn.getAttribute('data-cancel');
+    var orderNo = btn.getAttribute('data-cancel');
     if (!confirm('确定取消该订单吗？取消后释放锁定库存，订单保留在历史中。')) return;
     App.setLoading(btn, true);
     try {
-      await Api.cancelMyOrder(orderId);
+      await Api.cancelMyOrder(orderNo);
       App.showToast('订单已取消', 'success');
       load();
     } catch (err) {

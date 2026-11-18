@@ -116,15 +116,22 @@
     FAILED: ['交易失败', 'badge-failed']
   };
 
-  /* 迭代 4 · 订单五态状态机 + 已取消终态（与周琳皓订单核心域严格一致）
-     CUSTOMER_SUBMITTED → SELLER_CONFIRMED → READY_TO_SHIP → SHIPPED → COMPLETED，另有 CANCELLED */
+  /* 迭代 4 · 订单五态状态机 + 已取消终态。
+     对外状态码（订单管理域 OrderView.status，李宇轩）：PENDING → CONFIRMED → PACKED → SHIPPED → COMPLETED，另有 CANCELLED；
+     订单核心域枚举（PurchaseOrderView.status，周琳皓，下单结算结果仍用枚举名）：CUSTOMER_SUBMITTED → SELLER_CONFIRMED → READY_TO_SHIP。
+     两种口径并存，前端统一映射到同一套文案与徽标。 */
   var ORDER_STATUS = {
-    CUSTOMER_SUBMITTED: ['客户下单', 'badge-order-created'],
-    SELLER_CONFIRMED:   ['商家确认', 'badge-order-confirmed'],
-    READY_TO_SHIP:      ['备货完成', 'badge-order-prepared'],
+    /* 对外状态码（李宇轩） */
+    PENDING:            ['客户下单', 'badge-order-created'],
+    CONFIRMED:          ['商家确认', 'badge-order-confirmed'],
+    PACKED:             ['备货完成', 'badge-order-prepared'],
     SHIPPED:            ['开始发货', 'badge-order-shipped'],
     COMPLETED:          ['交易完成', 'badge-traded'],
     CANCELLED:          ['已取消', 'badge-failed'],
+    /* 订单核心域枚举别名（周琳皓） */
+    CUSTOMER_SUBMITTED: ['客户下单', 'badge-order-created'],
+    SELLER_CONFIRMED:   ['商家确认', 'badge-order-confirmed'],
+    READY_TO_SHIP:      ['备货完成', 'badge-order-prepared'],
     /* 兼容旧口径（迭代2 意向结果），保留展示能力 */
     SUCCESS:            ['交易成功', 'badge-traded'],
     FAIL:               ['交易失败', 'badge-failed'],

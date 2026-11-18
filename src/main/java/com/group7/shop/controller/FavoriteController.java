@@ -51,6 +51,13 @@ public class FavoriteController {
         return Result.success(favoriteService.list(customer.getId()));
     }
 
+    /** 是否已收藏（商品详情页收藏按钮态）。 */
+    @GetMapping("/{productId}")
+    public Result<Map<String, Boolean>> isFavorite(@RequestAttribute(CustomerAuthInterceptor.ATTRIBUTE) Customer customer,
+                                                   @PathVariable Long productId) {
+        return Result.success(Map.of("favorited", favoriteService.isFavorite(customer.getId(), productId)));
+    }
+
     @DeleteMapping("/{productId}")
     public Result<Void> unfavorite(@RequestAttribute(CustomerAuthInterceptor.ATTRIBUTE) Customer customer,
                                    @PathVariable Long productId) {
